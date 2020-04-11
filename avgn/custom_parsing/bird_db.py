@@ -9,7 +9,6 @@ import json
 from datetime import time as dtt
 
 
-
 def generate_json(wavfile, DT_ID, song_db):
     indv = wavfile.parent.parent.stem
     dt = datetime.strptime(wavfile.stem, "%Y-%m-%d_%H-%M-%S-%f")

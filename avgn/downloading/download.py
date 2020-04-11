@@ -1,5 +1,5 @@
 import warnings
-from tqdm.autonotebook import tqdm
+from tqdm import tqdm
 import requests
 import math
 from avgn.utils.paths import ensure_dir

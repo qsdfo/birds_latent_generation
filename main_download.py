@@ -1,6 +1,7 @@
+import click
 from sklearn.externals.joblib import Parallel, delayed
 from tqdm import tqdm
-import click
+
 import avgn
 from avgn.downloading.birdDB import openBirdDB_df, downloadBirdDB
 from avgn.utils.paths import DATA_DIR
