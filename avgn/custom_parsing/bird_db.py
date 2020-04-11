@@ -40,13 +40,12 @@ def generate_json(wavfile, DT_ID, song_db):
         },
     }
 
-    DATASET_ID = "BIRD_DB_" + species_dict[row.Species_short_name]["species"].replace(" ", "_")
+    species_name = row.Species_short_name.replace(" ", "_")
+    common_name = row.Subject_species.replace(" ", "_")
+    DATASET_ID = "BIRD_DB_" + species_name
 
-
-    row.Species_short_name
-
-    json_dict["species"] = species_dict[row.Species_short_name]["species"]
-    json_dict["common_name"] = species_dict[row.Species_short_name]["common_name"]
+    json_dict["species"] = species_name
+    json_dict["common_name"] = common_name
     json_dict["datetime"] = datestring
 
     sr = get_samplerate(wavfile.as_posix())
