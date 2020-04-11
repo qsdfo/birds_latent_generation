@@ -32,14 +32,6 @@ def generate_json(wavfile, DT_ID, song_db):
         else:
             json_dict[key] = row[key]
 
-    species_dict = {
-        "CAVI": {"species": "Vireo cassinii", "common_name": "Cassin's vireo"},
-        "CATH": {
-            "species": "Toxostoma redivivum",
-            "common_name": "California thrasher",
-        },
-    }
-
     species_name = row.Species_short_name.replace(" ", "_")
     common_name = row.Subject_species.replace(" ", "_")
     DATASET_ID = "BIRD_DB_" + species_name

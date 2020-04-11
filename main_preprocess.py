@@ -22,11 +22,16 @@ def main(n_jobs):
     dataset_path = Path(f'{DATA_DIR}/raw/{DATASET_ID}')
     wavs = set((dataset_path).expanduser().glob('**/*.wav'))
 
-    with Parallel(n_jobs=n_jobs, verbose=10) as parallel:
-        parallel(
-            delayed(generate_json)(wf, DT_ID, song_db)
-            for wf in tqdm(wavs)
-        )
+    for wf in tqdm(wavs):
+        try:
+            generate_json(wf, DT_ID, song_db)
+        except:
+            continue
+    # with Parallel(n_jobs=n_jobs, verbose=10) as parallel:
+    #     parallel(
+    #         delayed(
+    #
+    #     )
 
 
 if __name__ == '__main__':
