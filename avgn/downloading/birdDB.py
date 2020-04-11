@@ -1,3 +1,5 @@
+import os
+
 import avgn
 from avgn.utils.paths import DATA_DIR
 import pandas as pd
@@ -8,8 +10,8 @@ import urllib.request
 
 
 def openBirdDB_df():
-    song_db = pd.read_excel(DATA_DIR / "BIRD_DB.xls")
-    mainData_book = xlrd.open_workbook(DATA_DIR / "BIRD_DB.xls", formatting_info=True)
+    song_db = pd.read_excel(f'{DATA_DIR}/BIRD_DB.xls')
+    mainData_book = xlrd.open_workbook(f'{DATA_DIR}/BIRD_DB.xls', formatting_info=True)
     mainData_sheet = mainData_book.sheet_by_index(0)
     song_urls = [
         ""
@@ -38,29 +40,21 @@ def downloadBirdDB(row, bird_db_loc):
     )
     # PREP SAVE LOCATION
     recording_time_string = recording_time.strftime("%Y-%m-%d_%H-%M-%S-%f")
-    wav_location = (
-        bird_db_loc / species / subject_id / "wavs" / (recording_time_string + ".wav")
-    )
-    grid_location = (
-        bird_db_loc
-        / species
-        / subject_id
-        / "TextGrids"
-        / (recording_time_string + ".TextGrid")
-    )
+    wav_location = f'{bird_db_loc}/{species}/{subject_id}/wavs/{recording_time_string}.wav'
+    grid_location = f'{bird_db_loc}/{species}/{subject_id}/TextGrids/{recording_time_string}.TextGrid'
 
-    avgn.utils.paths.ensure_dir(wav_location.as_posix())
-    avgn.utils.paths.ensure_dir(grid_location.as_posix())
+    avgn.utils.paths.ensure_dir(wav_location)
+    avgn.utils.paths.ensure_dir(grid_location)
 
     # save wav
-    if not wav_location.is_file():
+    if not os.path.isfile(wav_location):
         try:
             urllib.request.urlretrieve(wav, wav_location)
         except HTTPError:
             print("Could not retrieve " + wav)
 
     # save textgrid
-    if not grid_location.is_file():
+    if not os.path.isfile(grid_location):
         try:
             urllib.request.urlretrieve(
                 "http://taylor0.biology.ucla.edu/birdDBQuery/Files/" + text_grid,

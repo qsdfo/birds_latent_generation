@@ -5,18 +5,9 @@ import pickle
 
 import zipfile
 from avgn.utils.paths import ensure_dir
-from tqdm.autonotebook import tqdm
+from tqdm import tqdm
 import matplotlib.pyplot as plt
 from zipfile import BadZipFile
-
-
-def prepare_env(GPU=[]):
-    import IPython
-
-    ipython = IPython.get_ipython()
-    ipython.magic("load_ext autoreload")
-    ipython.magic("autoreload 2")
-    ipython.magic("env CUDA_VISIBLE_DEVICES=GPU")
 
 
 def zero_one_norm(x):
