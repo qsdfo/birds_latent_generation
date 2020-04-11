@@ -18,10 +18,8 @@ from avgn.utils.json import NoIndent, NoIndentEncoder
 from avgn.utils.paths import DATA_DIR, ensure_dir
 
 
-@click.command()
-@click.option('-n', '--n_jobs', type=int, default=1)
-def main(n_jobs):
-    DATASET_ID = 'bird-db'
+def main():
+    DATASET_ID = 'BIRD_DB_CAVI'
     # create a unique datetime identifier
     DT_ID = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
@@ -48,7 +46,7 @@ def main(n_jobs):
         num_mels_bins=128,
         mel_lower_edge_hertz=500,
         mel_upper_edge_hertz=8000,
-        n_jobs=-1,
+        n_jobs=1,
         verbosity=1,
         nex=-1
     )
@@ -142,10 +140,11 @@ def main(n_jobs):
         print(indv)
         indv_keys = np.array(list(dataset.data_files.keys()))[indvs == indv][:nex]
 
-        joblib.Parallel(n_jobs=n_jobs, verbose=11)(
+        joblib.Parallel(n_jobs=1, verbose=11)(
             joblib.delayed(segment_spec_custom)(key, dataset.data_files[key], save=True)
             for key in tqdm(indv_keys, desc="files", leave=False)
         )
+
 
 if __name__ == '__main__':
     main()

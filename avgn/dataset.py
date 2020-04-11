@@ -27,10 +27,12 @@ class DataSet(object):
         self.DATASET_ID = DATASET_ID
         if type(self.DATASET_ID) == list:
             self.dataset_loc = [
-                most_recent_subdirectory(f'{DATA_DIR}/processed/{i}') for i in DATASET_ID
+                most_recent_subdirectory(DATA_DIR / "processed" / i) for i in DATASET_ID
             ]
         else:
-            self.dataset_loc = most_recent_subdirectory(f'{DATA_DIR}/processed/{DATASET_ID}')
+            self.dataset_loc = most_recent_subdirectory(
+                DATA_DIR / "processed" / DATASET_ID
+            )
         self._get_wav_json_files()
 
         self.sample_json = read_json(self.json_files[0])
