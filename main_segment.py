@@ -19,37 +19,36 @@ from avgn.utils.paths import DATA_DIR, ensure_dir
 
 
 def main():
-    DATASET_ID = 'BIRD_DB_CAVI'
+    DATASET_ID = 'Test'
     # create a unique datetime identifier
     DT_ID = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-    # hparams = HParams(
-    #     n_fft=4096,
-    #     mel_lower_edge_hertz=500,
-    #     mel_upper_edge_hertz=20000,
-    #     butter_lowcut=500,
-    #     butter_highcut=20000,
-    #     ref_level_db=20,
-    #     min_level_db=-100,
-    #     win_length_ms=4,
-    #     hop_length_ms=1,
-    #     n_jobs=-1,
-    #     verbosity=1,
-    #     nex=-1
-    # )
     hparams = HParams(
-        win_length_ms=None,
-        hop_length_ms=10,
-        n_fft=2048,
-        ref_level_db=20,
-        min_level_db=-60,
-        num_mels_bins=128,
+        n_fft=4096,
         mel_lower_edge_hertz=500,
-        mel_upper_edge_hertz=8000,
-        n_jobs=1,
+        mel_upper_edge_hertz=20000,
+        butter_lowcut=500,
+        butter_highcut=20000,
+        ref_level_db=20,
+        min_level_db=-100,
+        win_length_ms=4,
+        hop_length_ms=1,
+        n_jobs=-1,
         verbosity=1,
-        nex=-1
     )
+
+    # hparams = HParams(
+    #     win_length_ms=None,
+    #     hop_length_ms=10,
+    #     n_fft=2048,
+    #     ref_level_db=20,
+    #     min_level_db=-60,
+    #     num_mels_bins=128,
+    #     mel_lower_edge_hertz=500,
+    #     mel_upper_edge_hertz=8000,
+    #     n_jobs=1,
+    #     verbosity=1,
+    # )
 
     # create a dataset object
     dataset = DataSet(DATASET_ID, hparams=hparams)
@@ -135,15 +134,12 @@ def main():
         return results
 
     indvs = np.array(['_'.join(list(i)) for i in dataset.json_indv])
-    nex = -1
     for indv in tqdm(np.unique(indvs), desc="individuals"):
         print(indv)
-        indv_keys = np.array(list(dataset.data_files.keys()))[indvs == indv][:nex]
+        indv_keys = np.array(list(dataset.data_files.keys()))[indvs == indv]
 
-        joblib.Parallel(n_jobs=1, verbose=11)(
-            joblib.delayed(segment_spec_custom)(key, dataset.data_files[key], save=True)
-            for key in tqdm(indv_keys, desc="files", leave=False)
-        )
+        for key in tqdm(indv_keys, desc="files", leave=False):
+            segment_spec_custom(key, dataset.data_files[key], save=True)
 
 
 if __name__ == '__main__':
