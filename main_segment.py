@@ -16,7 +16,7 @@ from avgn.utils.paths import DATA_DIR, ensure_dir
 
 
 def main():
-    DATASET_ID = 'BIRD_DB_CAVI'
+    DATASET_ID = 'BIRD_DB_CATH'
     # create a unique datetime identifier
     DT_ID = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
@@ -121,7 +121,7 @@ def main():
     for indv in np.unique(indvs):
         indv_keys = np.array(list(dataset.data_files.keys()))[indvs == indv]
         for key in indv_keys:
-            print(f'############## {indv}: {key}')
+            print(f'##############')
             print(f'# {indv}: {key}')
             segment_spec_custom(key, dataset.data_files[key], save=True)
 
