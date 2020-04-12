@@ -60,7 +60,7 @@ def main():
     ref_level_db = 20
     pre = 0.97
     min_level_db = -100
-    min_level_db_floor = -60
+    min_level_db_floor = -50
     db_delta = 5
     silence_threshold = 0.01
     min_silence_for_spec = 0.05
