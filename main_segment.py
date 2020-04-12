@@ -121,7 +121,8 @@ def main():
     for indv in np.unique(indvs):
         indv_keys = np.array(list(dataset.data_files.keys()))[indvs == indv]
         for key in indv_keys:
-            print(f'{indv}: {key}')
+            print(f'############## {indv}: {key}')
+            print(f'# {indv}: {key}')
             segment_spec_custom(key, dataset.data_files[key], save=True)
 
 
