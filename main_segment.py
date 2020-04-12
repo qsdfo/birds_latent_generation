@@ -19,7 +19,7 @@ from avgn.utils.paths import DATA_DIR, ensure_dir
 
 
 def main():
-    DATASET_ID = 'Test'
+    DATASET_ID = 'BIRD_DB_CAVI'
     # create a unique datetime identifier
     DT_ID = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
