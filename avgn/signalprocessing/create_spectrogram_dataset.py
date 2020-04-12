@@ -8,7 +8,7 @@ from avgn.signalprocessing.filtering import butter_bandpass_filter
 from joblib import Parallel, delayed
 from tqdm.autonotebook import tqdm
 import pandas as pd
-
+from PIL import Image
 import noisereduce as nr
 
 
