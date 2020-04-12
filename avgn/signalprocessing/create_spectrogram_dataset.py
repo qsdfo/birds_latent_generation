@@ -1,7 +1,6 @@
 from collections import OrderedDict
 from avgn.utils.json import read_json
 from avgn.utils.audio import load_wav
-from PIL import Image
 from avgn.utils.audio import float32_to_int16, int16_to_float32
 import numpy as np
 from avgn.signalprocessing.spectrogramming import spectrogram

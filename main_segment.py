@@ -2,11 +2,8 @@ import json
 import warnings
 from datetime import datetime
 
-import click
-import joblib
 import matplotlib.pyplot as plt
 import numpy as np
-from tqdm import tqdm
 from vocalseg.dynamic_thresholding import dynamic_threshold_segmentation
 from vocalseg.dynamic_thresholding import plot_segmentations
 
@@ -19,7 +16,7 @@ from avgn.utils.paths import DATA_DIR, ensure_dir
 
 
 def main():
-    DATASET_ID = 'BIRD_DB_CAVI'
+    DATASET_ID = 'Test'
     # create a unique datetime identifier
     DT_ID = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
@@ -36,19 +33,6 @@ def main():
         n_jobs=-1,
         verbosity=1,
     )
-
-    # hparams = HParams(
-    #     win_length_ms=None,
-    #     hop_length_ms=10,
-    #     n_fft=2048,
-    #     ref_level_db=20,
-    #     min_level_db=-60,
-    #     num_mels_bins=128,
-    #     mel_lower_edge_hertz=500,
-    #     mel_upper_edge_hertz=8000,
-    #     n_jobs=1,
-    #     verbosity=1,
-    # )
 
     # create a dataset object
     dataset = DataSet(DATASET_ID, hparams=hparams)
@@ -134,11 +118,10 @@ def main():
         return results
 
     indvs = np.array(['_'.join(list(i)) for i in dataset.json_indv])
-    for indv in tqdm(np.unique(indvs), desc="individuals"):
-        print(indv)
+    for indv in np.unique(indvs):
         indv_keys = np.array(list(dataset.data_files.keys()))[indvs == indv]
-
-        for key in tqdm(indv_keys, desc="files", leave=False):
+        for key in indv_keys:
+            print(f'{indv}: {key}')
             segment_spec_custom(key, dataset.data_files[key], save=True)
 
 
