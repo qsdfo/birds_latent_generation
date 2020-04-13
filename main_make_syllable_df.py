@@ -24,7 +24,7 @@ def main(n_jobs,
          plot):
 
     DATASET_ID = 'BIRD_DB_CATH_segmented'
-    DATASET_ID = 'Test_segmented'
+    # DATASET_ID = 'Test_segmented'
 
     ################################################################################
     print('Create dataset')
@@ -177,7 +177,7 @@ def main(n_jobs,
 
     ################################################################################
     print('Save dataset')
-    save_loc = DATA_DIR / 'syllable_dfs' / DATASET_ID / 'canary.pickle'
+    save_loc = DATA_DIR / 'syllable_dfs' / DATASET_ID / 'data.pickle'
     ensure_dir(save_loc)
     syllable_df.to_pickle(save_loc)
 
