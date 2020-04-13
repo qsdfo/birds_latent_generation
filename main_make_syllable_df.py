@@ -24,6 +24,7 @@ def main(n_jobs,
          plot):
 
     DATASET_ID = 'BIRD_DB_CATH_segmented'
+    DATASET_ID = 'Test_segmented'
 
     ################################################################################
     print('Create dataset')
@@ -132,7 +133,8 @@ def main(n_jobs,
             delayed(log_resize_spec)(spec, scaling_factor=log_scaling_factor)
             for spec in tqdm(syllables_spec, desc="scaling spectrograms", leave=False)
         )
-
+    # Filter syllables badly shaped (often too shorts)
+    syllables_spec = [e for e in syllables_spec if e is not None]
     if plot:
         draw_spec_set(syllables_spec, zoom=1, maxrows=10, colsize=25)
 

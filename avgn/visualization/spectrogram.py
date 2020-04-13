@@ -183,7 +183,6 @@ def plot_segmentations(
     plt.show()
 
 
-
 def draw_spec_set(spectrograms, maxrows=3, colsize=10, cmap=plt.cm.afmhot, zoom=2):
     """
     """
