@@ -1,7 +1,5 @@
 import tensorflow as tf
 
-# from tensorflow.io import FixedLenFeature, parse_single_example
-
 
 def _dtype_to_tf_feattype(dtype):
     """ convert tf dtype to correct tffeature format
@@ -36,6 +34,8 @@ def _parse_function(example_proto, data_types):
 
 def _bytes_feature(value):
     """Returns a bytes_list from a string / byte."""
+    if isinstance(value, type(tf.constant(0))):
+        value = value.numpy()  # BytesList won't unpack a string from an EagerTensor.
     return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
 
 
@@ -67,4 +67,3 @@ def serialize_example(example):
 def filter_per_split(parsed_features, train=True):
     """ Filter samples depending on their split """
     return parsed_features["is_train"] if train else ~parsed_features["is_train"]
-

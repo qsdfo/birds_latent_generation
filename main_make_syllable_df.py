@@ -23,8 +23,8 @@ import seaborn as sns
 def main(n_jobs,
          plot):
 
-    DATASET_ID = 'BIRD_DB_CATH_segmented'
-    # DATASET_ID = 'Test_segmented'
+    # DATASET_ID = 'BIRD_DB_CATH_segmented'
+    DATASET_ID = 'Test_segmented'
 
     ################################################################################
     print('Create dataset')
@@ -160,7 +160,9 @@ def main(n_jobs,
 
     print(f'Data shape: {np.shape(syllables_spec)}')
 
-    syllable_df['spectrogram'] = syllables_spec
+    # Save as uint to save space
+    syllables_spec_uint = [(e * 255).astype('uint8') for e in syllables_spec]
+    syllable_df['spectrogram'] = syllables_spec_uint
 
     if plot:
         print(syllable_df[:3])
