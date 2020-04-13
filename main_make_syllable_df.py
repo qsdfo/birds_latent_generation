@@ -23,19 +23,20 @@ import seaborn as sns
 def main(n_jobs,
          plot):
 
-    # DATASET_ID = 'BIRD_DB_CATH_segmented'
-    DATASET_ID = 'Test_segmented'
+    DATASET_ID = 'BIRD_DB_CATH_segmented'
+    # DATASET_ID = 'Test_segmented'
 
     ################################################################################
     print('Create dataset')
     hparams = HParams(
-        num_mel_bins=32,
+        num_mel_bins=128,
+        n_fft=2048,
         mel_lower_edge_hertz=500,
-        mel_upper_edge_hertz=10000,
+        mel_upper_edge_hertz=8000,
         butter_lowcut=500,
-        butter_highcut=10000,
+        butter_highcut=8000,
         ref_level_db=20,
-        min_level_db=-25,
+        min_level_db=-60,
         mask_spec=True,
         win_length_ms=10,
         hop_length_ms=2,
@@ -100,7 +101,11 @@ def main(n_jobs,
             if i == nrows * ncols - 1:
                 break
 
-    syllable_df['audio'] = [i / np.max(i) for i in syllable_df.audio.values]
+    # Normalise
+    ret = []
+    for i in syllable_df.audio.values:
+        ret.append(i / np.max(i))
+    syllable_df['audio'] = ret
 
     ################################################################################
     print('Create Spectrograms')

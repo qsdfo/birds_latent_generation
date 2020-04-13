@@ -16,7 +16,6 @@ def main(plot):
     ##################################################################################
     print(f'##### Build training dataset')
     DATASET_ID = 'Test_segmented'
-    image_dim = 32
     df_loc = DATA_DIR / 'syllable_dfs' / DATASET_ID / 'data.pickle'
     syllable_df = pd.read_pickle(df_loc)
     print(f'Dataset contained {len(syllable_df)} syllables')
@@ -31,6 +30,7 @@ def main(plot):
     record_loc = DATA_DIR / 'tfrecords' / f"{DATASET_ID}.tfrecords"
     with tf.io.TFRecordWriter((record_loc).as_posix()) as writer:
         for idx, row in tqdm(syllable_df.iterrows(), total=len(syllable_df)):
+            image_dims = row.spectrogram.shape
             example = tfdata.serialize_example(
                 {
                     "spectrogram": {
@@ -68,10 +68,11 @@ def main(plot):
         fig, ax = plt.subplots(ncols=5, figsize=(15, 3))
         for i in range(5):
             # show the image
-            ax[i].matshow(spec[i].numpy().reshape(32, 24), cmap=plt.cm.Greys, origin="lower")
+            ax[i].matshow(spec[i].numpy().reshape(image_dims), cmap=plt.cm.Greys, origin="lower")
             string_label = indv[i].numpy().decode("utf-8")
             ax[i].set_title(string_label)
             ax[i].axis('off')
+        plt.show()
 
     ##################################################################################
     print(f'##### Model')
@@ -81,6 +82,7 @@ def main(plot):
     print(f'##### Training')
     for spec, index, indv in iter(dataset):
         model.train_net(x=spec)
+
 
 if __name__ == '__main__':
     main()
