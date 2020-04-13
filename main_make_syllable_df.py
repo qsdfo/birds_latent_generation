@@ -23,7 +23,7 @@ import seaborn as sns
 def main(n_jobs,
          plot):
 
-    DATASET_ID = 'Test_segmented'
+    DATASET_ID = 'BIRD_DB_CATH_segmented'
 
     ################################################################################
     print('Create dataset')
