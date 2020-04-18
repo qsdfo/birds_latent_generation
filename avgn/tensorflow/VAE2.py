@@ -73,7 +73,6 @@ class VAE2(tf.keras.Model):
         return self.decode(eps, apply_sigmoid=True)
 
     def plot_reconstruction(self, example_data, nex=8, zm=2):
-
         example_data_reconstructed = self.reconstruct(example_data)
         samples = self.sample()
         fig, axs = plt.subplots(ncols=nex, nrows=3, figsize=(zm * nex, zm * 3))

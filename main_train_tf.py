@@ -13,17 +13,17 @@ from avgn.tensorflow.VAE2 import VAE2
 from avgn.utils.paths import DATA_DIR, ensure_dir
 
 
-def VAE2(enc, dec):
-    pass
-
-
 @click.command()
 @click.option('-p', '--plot', is_flag=True)
-def main(plot):
+@click.option('-d', '--dataset', type=str)
+@click.option('-m', '--model', type=str)
+def main(plot,
+         dataset,
+         model):
     ##################################################################################
     # Parameters
-    DATASET_ID = 'Test_segmented'
-    MODEL_TYPE = 'VAE'
+    DATASET_ID = dataset
+    MODEL_TYPE = model
     N_Z = 32
     TRAIN_BUF = 60000
     BATCH_SIZE = 64
@@ -235,7 +235,10 @@ def main(plot):
             "Epoch: {}".format(epoch)
         )
         if plot:
-            model.plot_reconstruction(model, example_data)
+            if MODEL_TYPE == 'GAIA':
+                model.plot_reconstruction(example_data)
+            elif MODEL_TYPE == 'VAE':
+                model.plot_reconstruction(example_data, N_Z)
 
 
 if __name__ == '__main__':
