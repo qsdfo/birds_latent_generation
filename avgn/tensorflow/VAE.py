@@ -64,24 +64,23 @@ class VAE(tf.keras.Model):
         gradients = self.compute_gradients(train_x)
         self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
 
+    def plot_reconstruction(self, example_data, N_Z, nex=8, zm=2):
 
-def plot_reconstruction(model, example_data, N_Z, nex=8, zm=2):
-
-    example_data_reconstructed = model.reconstruct(example_data)
-    samples = model.decode(tf.random.normal(shape=(len(example_data), N_Z)))
-    fig, axs = plt.subplots(ncols=nex, nrows=3, figsize=(zm * nex, zm * 3))
-    for axi, (dat, lab) in enumerate(
-        zip(
-            [example_data, example_data_reconstructed, samples],
-            ["data", "data recon", "samples"],
-        )
-    ):
-        for ex in range(nex):
-            axs[axi, ex].matshow(
-                dat.numpy()[ex].squeeze(), cmap=plt.cm.Greys, vmin=0, vmax=1
+        example_data_reconstructed = self.reconstruct(example_data)
+        samples = self.decode(tf.random.normal(shape=(len(example_data), N_Z)))
+        fig, axs = plt.subplots(ncols=nex, nrows=3, figsize=(zm * nex, zm * 3))
+        for axi, (dat, lab) in enumerate(
+            zip(
+                [example_data, example_data_reconstructed, samples],
+                ["data", "data recon", "samples"],
             )
-            axs[axi, ex].axes.get_xaxis().set_ticks([])
-            axs[axi, ex].axes.get_yaxis().set_ticks([])
-        axs[axi, 0].set_ylabel(lab)
+        ):
+            for ex in range(nex):
+                axs[axi, ex].matshow(
+                    dat.numpy()[ex].squeeze(), cmap=plt.cm.Greys, vmin=0, vmax=1
+                )
+                axs[axi, ex].axes.get_xaxis().set_ticks([])
+                axs[axi, ex].axes.get_yaxis().set_ticks([])
+            axs[axi, 0].set_ylabel(lab)
 
-    plt.show()
+        plt.show()

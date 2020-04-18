@@ -3,11 +3,18 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+from tensorflow_probability.python.distributions import Chi2
 from tqdm import tqdm
 
 import avgn.tensorflow.data as tfdata
-from avgn.tensorflow.GAIA6 import GAIA
+from avgn.tensorflow.GAIA6 import GAIA, unet_mnist
+from avgn.tensorflow.VAE import VAE
+from avgn.tensorflow.VAE2 import VAE2
 from avgn.utils.paths import DATA_DIR, ensure_dir
+
+
+def VAE2(enc, dec):
+    pass
 
 
 @click.command()
@@ -16,11 +23,11 @@ def main(plot):
     ##################################################################################
     # Parameters
     DATASET_ID = 'Test_segmented'
-    N_Z = 128
+    MODEL_TYPE = 'VAE'
+    N_Z = 32
     TRAIN_BUF = 60000
     BATCH_SIZE = 64
     TEST_BUF = 10000
-    DIMS = (28, 28, 1)
     N_TRAIN_BATCHES = int(TRAIN_BUF / BATCH_SIZE)
     N_TEST_BATCHES = int(TEST_BUF / BATCH_SIZE)
 
@@ -40,11 +47,13 @@ def main(plot):
     record_loc = DATA_DIR / 'tfrecords' / f"{DATASET_ID}.tfrecords"
     with tf.io.TFRecordWriter((record_loc).as_posix()) as writer:
         for idx, row in tqdm(syllable_df.iterrows(), total=len(syllable_df)):
-            image_dims = row.spectrogram.shape
+            # FIXME
+            data = row.spectrogram[:24, :24]
+            DIMS = (*data.shape, 1)
             example = tfdata.serialize_example(
                 {
                     "spectrogram": {
-                        "data": row.spectrogram.flatten().tobytes(),
+                        "data": data.flatten().tobytes(),
                         "_type": tfdata._bytes_feature,
                     },
                     "index": {
@@ -78,7 +87,7 @@ def main(plot):
         fig, ax = plt.subplots(ncols=5, figsize=(15, 3))
         for i in range(5):
             # show the image
-            ax[i].matshow(spec[i].numpy().reshape(image_dims), cmap=plt.cm.Greys, origin="lower")
+            ax[i].matshow(spec[i].numpy().reshape(DIMS[:2]), cmap=plt.cm.Greys, origin="lower")
             string_label = indv[i].numpy().decode("utf-8")
             ax[i].set_title(string_label)
             ax[i].axis('off')
@@ -98,9 +107,38 @@ def main(plot):
         tf.keras.layers.Dense(units=N_Z * 2),
     ]
 
+    # decoder = [
+    #     tf.keras.layers.Dense(units=7 * 7 * 64, activation="relu"),
+    #     tf.keras.layers.Reshape(target_shape=(7, 7, 64)),
+    #     tf.keras.layers.Conv2DTranspose(
+    #         filters=64, kernel_size=3, strides=(2, 2), padding="SAME", activation="relu"
+    #     ),
+    #     tf.keras.layers.Conv2DTranspose(
+    #         filters=32, kernel_size=3, strides=(2, 2), padding="SAME", activation="relu"
+    #     ),
+    #     tf.keras.layers.Conv2DTranspose(
+    #         filters=1, output_shape=DIMS, kernel_size=3, strides=(1, 1), padding="SAME", activation="sigmoid"
+    #     ),
+    # ]
+
+    # Need special deconv stack with weird rectangular spectro... perhaps change that later
+    # decoder = [
+    #     tf.keras.layers.Dense(units=8 * 6 * 64, activation="relu"),
+    #     tf.keras.layers.Reshape(target_shape=(8, 6, 64)),
+    #     tf.keras.layers.Conv2DTranspose(
+    #         filters=64, kernel_size=3, strides=(4, 2), padding="SAME", activation="relu"
+    #     ),
+    #     tf.keras.layers.Conv2DTranspose(
+    #         filters=32, kernel_size=3, strides=(4, 2), padding="SAME", activation="relu"
+    #     ),
+    #     tf.keras.layers.Conv2DTranspose(
+    #         filters=1, kernel_size=3, strides=(1, 1), padding="SAME", activation="sigmoid"
+    #     ),
+    # ]
+
     decoder = [
-        tf.keras.layers.Dense(units=7 * 7 * 64, activation="relu"),
-        tf.keras.layers.Reshape(target_shape=(7, 7, 64)),
+        tf.keras.layers.Dense(units=6 * 6 * 64, activation="relu"),
+        tf.keras.layers.Reshape(target_shape=(6, 6, 64)),
         tf.keras.layers.Conv2DTranspose(
             filters=64, kernel_size=3, strides=(2, 2), padding="SAME", activation="relu"
         ),
@@ -112,101 +150,92 @@ def main(plot):
         ),
     ]
 
-    # the unet function
-    gen_optimizer = tf.keras.optimizers.Adam(1e-3, beta_1=0.5)
-    disc_optimizer = tf.keras.optimizers.RMSprop(1e-3)
-
     # model
-    model = GAIA(
-        enc=encoder,
-        dec=decoder,
-        unet_function=unet_mnist,
-        gen_optimizer=gen_optimizer,
-        disc_optimizer=disc_optimizer,
-        chsq=Chi2(df=1 / BATCH_SIZE)
-    )
+    if MODEL_TYPE == 'GAIA':
+        # the unet function
+        gen_optimizer = tf.keras.optimizers.Adam(1e-3, beta_1=0.5)
+        disc_optimizer = tf.keras.optimizers.RMSprop(1e-3)
+
+        model = GAIA(
+            dims=DIMS,
+            enc=encoder,
+            dec=decoder,
+            unet_function=unet_mnist,
+            gen_optimizer=gen_optimizer,
+            disc_optimizer=disc_optimizer,
+            chsq=Chi2(df=1 / BATCH_SIZE)
+        )
+
+        # a pandas dataframe to save the loss information to
+        losses = pd.DataFrame(columns=['d_xg_loss', 'd_xi_loss', 'd_x_loss', 'xg_loss'])
+
+    elif MODEL_TYPE == 'VAE':
+        # the optimizer for the model
+        optimizer = tf.keras.optimizers.Adam(1e-3)
+
+        # model
+        model = VAE(
+            enc=encoder,
+            dec=decoder,
+            optimizer=optimizer
+        )
+
+        # a pandas dataframe to save the loss information to
+        losses = pd.DataFrame(columns=['recon_loss', 'latent_loss'])
+
+    elif MODEL_TYPE == 'VAE2':
+        # the optimizer for the model
+        optimizer = tf.keras.optimizers.Adam(1e-3)
+
+        # model
+        model = VAE2(
+            enc=encoder,
+            dec=decoder,
+            optimizer=optimizer
+        )
+
+        # a pandas dataframe to save the loss information to
+        losses = pd.DataFrame(columns=['recon_loss', 'latent_loss'])
 
     ##################################################################################
     print(f'##### Training')
-    for spec, index, indv in iter(dataset):
-        model.train_net(x=spec)
+    # for spec, index, indv in iter(dataset):
+    #     model.train_net(x=spec)
 
+    train_dataset = dataset
+    # Todo
+    #    create a real test set
+    test_dataset = dataset
 
-def unet_convblock_up(
-        last_conv,
-        cross_conv,
-        channels=16,
-        kernel=(3, 3),
-        activation="relu",
-        pool_size=(2, 2),
-        kernel_initializer="he_normal",
-):
-    """ A downsampling convolutional block for a UNET
-    """
+    # exampled data for plotting results
+    example_data, _, _ = next(iter(train_dataset))
+    example_data_reshaped = tf.cast(tf.reshape(example_data, (-1, *DIMS)), "float32") / 255.
+    model.train_net(example_data_reshaped)
 
-    up_conv = tf.keras.layers.UpSampling2D(size=(2, 2))(last_conv)
-    merge = tf.keras.layers.concatenate([up_conv, cross_conv], axis=3)
-    conv = tf.keras.layers.Conv2D(
-        channels,
-        kernel,
-        activation=activation,
-        padding="same",
-        kernel_initializer=kernel_initializer,
-    )(merge)
-    conv = tf.keras.layers.Conv2D(
-        channels,
-        kernel,
-        activation=activation,
-        padding="same",
-        kernel_initializer=kernel_initializer,
-    )(conv)
-    return conv
-
-
-def unet_convblock_down(
-        _input,
-        channels=16,
-        kernel=(3, 3),
-        activation="relu",
-        pool_size=(2, 2),
-        kernel_initializer="he_normal",
-):
-    """ An upsampling convolutional block for a UNET
-    """
-    conv = tf.keras.layers.Conv2D(
-        channels,
-        kernel,
-        activation=activation,
-        padding="same",
-        kernel_initializer=kernel_initializer,
-    )(_input)
-    conv = tf.keras.layers.Conv2D(
-        channels,
-        kernel,
-        activation=activation,
-        padding="same",
-        kernel_initializer=kernel_initializer,
-    )(conv)
-    pool = tf.keras.layers.MaxPooling2D(pool_size=pool_size)(conv)
-    return conv, pool
-
-
-def unet_mnist():
-    """ the architecture for a UNET specific to MNIST
-    """
-    inputs = tf.keras.layers.Input(shape=(28, 28, 1))
-    up_1, pool_1 = unet_convblock_down(inputs, channels=32)
-    up_2, pool_2 = unet_convblock_down(pool_1, channels=64)
-    conv_middle = tf.keras.layers.Conv2D(
-        128, (3, 3), activation="relu", kernel_initializer="he_normal", padding="same"
-    )(pool_2)
-    conv_middle = tf.keras.layers.Conv2D(
-        128, (3, 3), activation="relu", kernel_initializer="he_normal", padding="same"
-    )(conv_middle)
-    down_2 = unet_convblock_up(conv_middle, up_2, channels=64)
-    down_1 = unet_convblock_up(down_2, up_1, channels=32)
-    outputs = tf.keras.layers.Conv2D(1, (1, 1), activation="sigmoid")(down_1)
-    return inputs, outputs
+    n_epochs = 50
+    for epoch in range(n_epochs):
+        # train
+        for batch, train_x in tqdm(
+                zip(range(N_TRAIN_BATCHES), train_dataset), total=N_TRAIN_BATCHES
+        ):
+            data_train, ind, indv = train_x
+            data_train_proc = tf.cast(tf.reshape(data_train, (-1, *DIMS)), "float32") / 255.
+            model.train_net(data_train_proc)
+        # test on holdout
+        loss = []
+        for batch, test_x in tqdm(
+                zip(range(N_TEST_BATCHES), test_dataset), total=N_TEST_BATCHES
+        ):
+            data_test, ind, indv = test_x
+            data_test_proc = tf.cast(tf.reshape(data_test, (-1, *DIMS)), "float32") / 255.
+            loss.append(model.compute_loss(data_test_proc))
+        losses.loc[len(losses)] = np.mean(loss, axis=0)
+        # plot results
+        print(
+            "Epoch: {}".format(epoch)
+        )
+        if plot:
+            model.plot_reconstruction(model, example_data)
 
 
 if __name__ == '__main__':

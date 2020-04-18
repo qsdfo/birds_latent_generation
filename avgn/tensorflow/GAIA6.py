@@ -10,7 +10,7 @@ class GAIA(tf.keras.Model):
         tf.keras.Model
     """
 
-    def __init__(self, d_prop_xg=1.0, g_prop_interp=1.0, **kwargs):
+    def __init__(self, dims, d_prop_xg=1.0, g_prop_interp=1.0, **kwargs):
         super(GAIA, self).__init__()
         self.__dict__.update(kwargs)
         self.d_prop_xg = d_prop_xg
@@ -18,7 +18,7 @@ class GAIA(tf.keras.Model):
         self.enc = tf.keras.Sequential(self.enc)
         self.dec = tf.keras.Sequential(self.dec)
 
-        inputs, outputs = self.unet_function()
+        inputs, outputs = self.unet_function(dims)
         self.disc = tf.keras.Model(inputs=[inputs], outputs=[outputs])
 
     def encode(self, x):
@@ -120,12 +120,21 @@ class GAIA(tf.keras.Model):
         """ takes the dot product of some random tensor of batch_size,
          and the z representation of the batch as the interpolation
         """
-        if self.chsq.df != z.shape[0]:
-            self.chsq = Chi2(df=1 / z.shape[0])
-        ip = self.chsq.sample((z.shape[0], z.shape[0]))
-        ip = ip / tf.reduce_sum(ip, axis=0)
-        zi = tf.transpose(tf.tensordot(tf.transpose(z), ip, axes=1))
-        return zi
+        # FIXME
+        # Need nighty build !!!
+        # cf:  https://github.com/timsainb/tensorflow2-generative-models/blob/master/1.0-Variational-Autoencoder-fashion-mnist.ipynb
+        # FIXME
+        # FIXME
+        # if self.chsq.df != z.shape[0]:
+        #     self.chsq = Chi2(df=1 / z.shape[0])
+        # ip = self.chsq.sample((z.shape[0], z.shape[0]))
+        # ip = ip / tf.reduce_sum(ip, axis=0)
+        # zi = tf.transpose(tf.tensordot(tf.transpose(z), ip, axes=1))
+        # return zi
+        # FIXME
+        # FIXME
+        # FIXME
+        return z
 
 
 def sigmoid(x, shift=0.0, mult=20):
@@ -154,3 +163,79 @@ def plot_reconstruction(model, example_data, nex=5, zm=3):
 
     plt.show()
 
+
+def unet_convblock_up(
+        last_conv,
+        cross_conv,
+        channels=16,
+        kernel=(3, 3),
+        activation="relu",
+        pool_size=(2, 2),
+        kernel_initializer="he_normal",
+):
+    """ A downsampling convolutional block for a UNET
+    """
+
+    up_conv = tf.keras.layers.UpSampling2D(size=(2, 2))(last_conv)
+    merge = tf.keras.layers.concatenate([up_conv, cross_conv], axis=3)
+    conv = tf.keras.layers.Conv2D(
+        channels,
+        kernel,
+        activation=activation,
+        padding="same",
+        kernel_initializer=kernel_initializer,
+    )(merge)
+    conv = tf.keras.layers.Conv2D(
+        channels,
+        kernel,
+        activation=activation,
+        padding="same",
+        kernel_initializer=kernel_initializer,
+    )(conv)
+    return conv
+
+
+def unet_convblock_down(
+        _input,
+        channels=16,
+        kernel=(3, 3),
+        activation="relu",
+        pool_size=(2, 2),
+        kernel_initializer="he_normal",
+):
+    """ An upsampling convolutional block for a UNET
+    """
+    conv = tf.keras.layers.Conv2D(
+        channels,
+        kernel,
+        activation=activation,
+        padding="same",
+        kernel_initializer=kernel_initializer,
+    )(_input)
+    conv = tf.keras.layers.Conv2D(
+        channels,
+        kernel,
+        activation=activation,
+        padding="same",
+        kernel_initializer=kernel_initializer,
+    )(conv)
+    pool = tf.keras.layers.MaxPooling2D(pool_size=pool_size)(conv)
+    return conv, pool
+
+
+def unet_mnist(dims):
+    """ the architecture for a UNET specific to MNIST
+    """
+    inputs = tf.keras.layers.Input(shape=dims)
+    up_1, pool_1 = unet_convblock_down(inputs, channels=32)
+    up_2, pool_2 = unet_convblock_down(pool_1, channels=64)
+    conv_middle = tf.keras.layers.Conv2D(
+        128, (3, 3), activation="relu", kernel_initializer="he_normal", padding="same"
+    )(pool_2)
+    conv_middle = tf.keras.layers.Conv2D(
+        128, (3, 3), activation="relu", kernel_initializer="he_normal", padding="same"
+    )(conv_middle)
+    down_2 = unet_convblock_up(conv_middle, up_2, channels=64)
+    down_1 = unet_convblock_up(down_2, up_1, channels=32)
+    outputs = tf.keras.layers.Conv2D(1, (1, 1), activation="sigmoid")(down_1)
+    return inputs, outputs

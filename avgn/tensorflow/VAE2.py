@@ -6,14 +6,14 @@ import numpy as np
 ds = tfp.distributions
 
 
-class VAE(tf.keras.Model):
+class VAE2(tf.keras.Model):
     """a basic vae class for tensorflow
     Extends:
         tf.keras.Model
     """
 
     def __init__(self, beta=1.0, **kwargs):
-        super(VAE, self).__init__()
+        super(VAE2, self).__init__()
         self.__dict__.update(kwargs)
         self.beta = beta
         self.enc = tf.keras.Sequential(self.enc)
@@ -72,6 +72,27 @@ class VAE(tf.keras.Model):
             eps = tf.random.normal(shape=(100, latent_dim))
         return self.decode(eps, apply_sigmoid=True)
 
+    def plot_reconstruction(self, example_data, nex=8, zm=2):
+
+        example_data_reconstructed = self.reconstruct(example_data)
+        samples = self.sample()
+        fig, axs = plt.subplots(ncols=nex, nrows=3, figsize=(zm * nex, zm * 3))
+        for axi, (dat, lab) in enumerate(
+                zip(
+                    [example_data, example_data_reconstructed, samples],
+                    ["data", "data recon", "samples"],
+                )
+        ):
+            for ex in range(nex):
+                axs[axi, ex].matshow(
+                    dat.numpy()[ex].squeeze(), cmap=plt.cm.Greys, vmin=0, vmax=1
+                )
+                axs[axi, ex].axes.get_xaxis().set_ticks([])
+                axs[axi, ex].axes.get_yaxis().set_ticks([])
+            axs[axi, 0].set_ylabel(lab)
+
+        plt.show()
+
 
 def log_normal_pdf(sample, mean, logvar, raxis=1):
     log2pi = tf.math.log(2.0 * np.pi)
@@ -80,23 +101,3 @@ def log_normal_pdf(sample, mean, logvar, raxis=1):
     )
 
 
-def plot_reconstruction(model, example_data, N_Z, nex=8, zm=2):
-
-    example_data_reconstructed = model.reconstruct(example_data)
-    samples = model.sample()
-    fig, axs = plt.subplots(ncols=nex, nrows=3, figsize=(zm * nex, zm * 3))
-    for axi, (dat, lab) in enumerate(
-        zip(
-            [example_data, example_data_reconstructed, samples],
-            ["data", "data recon", "samples"],
-        )
-    ):
-        for ex in range(nex):
-            axs[axi, ex].matshow(
-                dat.numpy()[ex].squeeze(), cmap=plt.cm.Greys, vmin=0, vmax=1
-            )
-            axs[axi, ex].axes.get_xaxis().set_ticks([])
-            axs[axi, ex].axes.get_yaxis().set_ticks([])
-        axs[axi, 0].set_ylabel(lab)
-
-    plt.show()
