@@ -15,6 +15,7 @@ from avgn.tensorflow.VAE import VAE
 from avgn.tensorflow.VAE2 import VAE2
 from avgn.utils.paths import DATA_DIR, ensure_dir, MODEL_DIR
 
+tf.debugging.set_log_device_placement(True)
 
 @click.command()
 @click.option('-p', '--plot', is_flag=True)
@@ -31,9 +32,9 @@ def main(plot,
     # Parameters
     DATASET_ID = dataset
     MODEL_TYPE = model
-    N_Z = 32
+    N_Z = 64
     TRAIN_BUF = 60000
-    BATCH_SIZE = 64
+    BATCH_SIZE = 512
     TEST_BUF = 10000
     N_TRAIN_BATCHES = int(TRAIN_BUF / BATCH_SIZE)
     N_TEST_BATCHES = int(TEST_BUF / BATCH_SIZE)
@@ -174,6 +175,8 @@ def main(plot,
 
         # a pandas dataframe to save the loss information to
         losses = pd.DataFrame(columns=['recon_loss', 'latent_loss'])
+
+    print(model)
 
     ##################################################################################
     print(f'##### Model Summary')
