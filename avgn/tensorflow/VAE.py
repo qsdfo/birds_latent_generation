@@ -11,12 +11,24 @@ class VAE(tf.keras.Model):
         tf.keras.Model
     """
 
-    def __init__(self, beta=1.0, **kwargs):
+    def __init__(self, beta=1.0, loadpath=None, **kwargs):
         super(VAE, self).__init__()
         self.__dict__.update(kwargs)
         self.beta = beta
         self.enc = tf.keras.Sequential(self.enc)
         self.dec = tf.keras.Sequential(self.dec)
+
+    def save_model(self, path):
+        # self.enc.save(f'{path}/encoder.h5')
+        # self.dec.save(f'{path}/decoder.h5')
+        self.enc.save_weights(f'{path}/encoder.h5')
+        self.dec.save_weights(f'{path}/decoder.h5')
+
+    def load_model(self, path):
+        self.enc.load_weights(f'{path}/encoder.h5')
+        self.dec.load_weights(f'{path}/decoder.h5')
+        # self.enc = tf.keras.models.load_model(f'{path}/encoder.h5')
+        # self.dec = tf.keras.models.load_model(f'{path}/decoder.h5')
 
     def encode(self, x):
         mu, sigma = tf.split(self.enc(x), num_or_size_splits=2, axis=1)
