@@ -21,7 +21,7 @@ from avgn.utils.paths import DATA_DIR, ensure_dir, MODEL_DIR
 @click.option('-d', '--dataset', type=str)
 @click.option('-m', '--model', type=str)
 @click.option('-l', '--load', type=str)
-@click.option('-t', '--train', type=str)
+@click.option('-t', '--train', is_flag=True)
 def main(plot,
          dataset,
          model,
@@ -55,8 +55,7 @@ def main(plot,
     record_loc = DATA_DIR / 'tfrecords' / f"{DATASET_ID}.tfrecords"
     with tf.io.TFRecordWriter((record_loc).as_posix()) as writer:
         for idx, row in tqdm(syllable_df.iterrows(), total=len(syllable_df)):
-            # FIXME
-            data = row.spectrogram[:24, :24]
+            data = row.spectrogram
             DIMS = (*data.shape, 1)
             example = tfdata.serialize_example(
                 {
@@ -114,43 +113,15 @@ def main(plot,
         tf.keras.layers.Dense(units=N_Z * 2),
     ]
 
-    # decoder = [
-    #     tf.keras.layers.Dense(units=7 * 7 * 64, activation="relu"),
-    #     tf.keras.layers.Reshape(target_shape=(7, 7, 64)),
-    #     tf.keras.layers.Conv2DTranspose(
-    #         filters=64, kernel_size=3, strides=(2, 2), padding="SAME", activation="relu"
-    #     ),
-    #     tf.keras.layers.Conv2DTranspose(
-    #         filters=32, kernel_size=3, strides=(2, 2), padding="SAME", activation="relu"
-    #     ),
-    #     tf.keras.layers.Conv2DTranspose(
-    #         filters=1, output_shape=DIMS, kernel_size=3, strides=(1, 1), padding="SAME", activation="sigmoid"
-    #     ),
-    # ]
-
     # Need special deconv stack with weird rectangular spectro... perhaps change that later
-    # decoder = [
-    #     tf.keras.layers.Dense(units=8 * 6 * 64, activation="relu"),
-    #     tf.keras.layers.Reshape(target_shape=(8, 6, 64)),
-    #     tf.keras.layers.Conv2DTranspose(
-    #         filters=64, kernel_size=3, strides=(4, 2), padding="SAME", activation="relu"
-    #     ),
-    #     tf.keras.layers.Conv2DTranspose(
-    #         filters=32, kernel_size=3, strides=(4, 2), padding="SAME", activation="relu"
-    #     ),
-    #     tf.keras.layers.Conv2DTranspose(
-    #         filters=1, kernel_size=3, strides=(1, 1), padding="SAME", activation="sigmoid"
-    #     ),
-    # ]
-
     decoder = [
-        tf.keras.layers.Dense(units=6 * 6 * 64, activation="relu"),
-        tf.keras.layers.Reshape(target_shape=(6, 6, 64)),
+        tf.keras.layers.Dense(units=8 * 6 * 64, activation="relu"),
+        tf.keras.layers.Reshape(target_shape=(8, 6, 64)),
         tf.keras.layers.Conv2DTranspose(
-            filters=64, kernel_size=3, strides=(2, 2), padding="SAME", activation="relu"
+            filters=64, kernel_size=3, strides=(4, 2), padding="SAME", activation="relu"
         ),
         tf.keras.layers.Conv2DTranspose(
-            filters=32, kernel_size=3, strides=(2, 2), padding="SAME", activation="relu"
+            filters=32, kernel_size=3, strides=(4, 2), padding="SAME", activation="relu"
         ),
         tf.keras.layers.Conv2DTranspose(
             filters=1, kernel_size=3, strides=(1, 1), padding="SAME", activation="sigmoid"
@@ -237,9 +208,7 @@ def main(plot,
         # inputs_set = False
         for epoch in range(n_epochs):
             # train
-            for batch, train_x in tqdm(
-                    zip(range(N_TRAIN_BATCHES), train_dataset), total=N_TRAIN_BATCHES
-            ):
+            for batch, train_x in zip(range(N_TRAIN_BATCHES), train_dataset):
                 data_train, ind, indv = train_x
                 data_train_proc = tf.cast(tf.reshape(data_train, (-1, *DIMS)), "float32") / 255.
                 # if not inputs_set:
@@ -248,17 +217,16 @@ def main(plot,
                 model.train_net(data_train_proc)
             # test on holdout
             loss = []
-            for batch, test_x in tqdm(
-                    zip(range(N_TEST_BATCHES), test_dataset), total=N_TEST_BATCHES
-            ):
+            for batch, test_x in zip(range(N_TEST_BATCHES), test_dataset):
                 data_test, ind, indv = test_x
                 data_test_proc = tf.cast(tf.reshape(data_test, (-1, *DIMS)), "float32") / 255.
                 loss.append(model.compute_loss(data_test_proc))
-            losses.loc[len(losses)] = np.mean(loss, axis=0)
+            current_index_loss = len(losses)
+            losses.loc[current_index_loss] = np.mean(loss, axis=0)
             # plot results
-            print(
-                "Epoch: {}".format(epoch)
-            )
+            print(f"Epoch: {epoch}")
+            for loss_name, loss_value in losses.items():
+                print(f'{loss_name}: {loss_value[current_index_loss]}')
             if plot:
                 if MODEL_TYPE == 'GAIA':
                     model.plot_reconstruction(example_data)
@@ -266,12 +234,12 @@ def main(plot,
                     model.plot_reconstruction(example_data, N_Z)
 
             # Save model
-            # if (epoch % epoch_save == 0) or (epoch == n_epochs):
-            savepath = MODEL_DIR / f'{MODEL_TYPE}-{epoch}-{TIMESTAMP}'
-            if os.path.isdir(savepath):
-                os.rmdir(savepath)
-            os.mkdir(savepath)
-            model.save_model(savepath)
+            if (epoch % epoch_save == 0) or (epoch == n_epochs):
+                savepath = MODEL_DIR / f'{MODEL_TYPE}-{epoch}-{TIMESTAMP}'
+                if os.path.isdir(savepath):
+                    os.rmdir(savepath)
+                os.mkdir(savepath)
+                model.save_model(savepath)
 
 
 if __name__ == '__main__':
