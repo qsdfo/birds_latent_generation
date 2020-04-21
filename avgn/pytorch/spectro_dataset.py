@@ -29,10 +29,3 @@ class SpectroDataset(Dataset):
         # (batch, channel, height, width)
         sample = np.expand_dims(x_np, axis=0)
         return sample
-
-
-def cuda_variable(tensor):
-    if torch.cuda.is_available():
-        return tensor.to('cuda')
-    else:
-        return tensor

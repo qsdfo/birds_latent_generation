@@ -101,8 +101,8 @@ def main(plot,
     best_val_loss = float('inf')
     if train:
         for ind_epoch in range(config['num_epochs']):
-            train_loss = epoch(model, optimizer, train_dataloader, training=True)
-            val_loss = epoch(model, optimizer, val_dataloader, training=False)
+            train_loss = epoch(model, optimizer, train_dataloader, training=True, device=device)
+            val_loss = epoch(model, optimizer, val_dataloader, training=False, device=device)
             print(f'Epoch {ind_epoch}:')
             print(f'Train loss {train_loss}:')
             print(f'Val loss {val_loss}:')
@@ -115,14 +115,14 @@ def main(plot,
                 model.save(path=savedir)
 
 
-def epoch(model, optimizer, dataloader, training):
+def epoch(model, optimizer, dataloader, training, device):
     if training:
         model.train()
     else:
         model.eval()
     losses = []
     for batch_idx, data in enumerate(dataloader):
-        data_cuda = cuda_variable(torch.tensor(data))
+        data_cuda = torch.from_numpy(data).to(device)
         optimizer.zero_grad()
         loss = model.step(data_cuda)
         if training:
