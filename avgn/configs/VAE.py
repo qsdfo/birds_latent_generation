@@ -7,6 +7,7 @@ config = {
     'n_z': 32,
     'decoder_kwargs': dict(),
     'encoder_kwargs': dict(),
+    'model_kwargs': dict(),
 
     # --- Dataloader ---
     'dataloader_generator_kwargs': dict(),

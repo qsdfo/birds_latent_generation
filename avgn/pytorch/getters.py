@@ -1,8 +1,9 @@
-from avgn import pytorch
+from avgn.pytorch.VAE import VAE
 
 
 def get_model(model_type, model_kwargs, encoder, decoder):
     if model_type == 'VAE':
-        pytorch.VAE(model_kwargs=model_kwargs,
-                    encoder=encoder,
-                    decoder=decoder)
+        return VAE(encoder=encoder,
+                   decoder=decoder)
+    else:
+        return None

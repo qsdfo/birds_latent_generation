@@ -1,4 +1,6 @@
 from torch import nn
+import numpy as np
+import torch.nn.functional as F
 
 
 class Decoder(nn.Module):
@@ -8,27 +10,33 @@ class Decoder(nn.Module):
     Uses positional embeddings
     """
 
-    def __init__(self, input_dim, n_z):
-        h_dim, w_dim = input_dim
+    def __init__(self, deconv_input_shape, n_z):
+        self.deconv_input_shape = deconv_input_shape
+        prod_deconv_input_shape = int(np.prod(deconv_input_shape))
         super(Decoder, self).__init__()
-        self.convolution_stack = nn.Sequential(
-            nn.Conv2d(in_channels=1, out_channels=32, kernel_size=3, stride=(3, 3)),
-            nn.ReLU(),
-            nn.Conv2d(32, 64, 3, stride=(3, 3)),
-            nn.ReLU(),
+        self.to_deconv_stack = nn.Sequential(
+            nn.Linear(in_features=n_z, out_features=prod_deconv_input_shape),
+            nn.ReLU()
         )
-        self.z_mapping = nn.Sequential(
-            nn.Linear(in_features=28, out_features=n_z*2),
-        )
+        self.deconv1 = nn.ConvTranspose2d(deconv_input_shape[0], 64, (4, 2), stride=(4, 2))  # (b, 64, 32, 12)
+        self.deconv2 = nn.ConvTranspose2d(64, 32, (4, 2), stride=(4, 2))  # (b, 32, 128, 24)
+        self.deconv3 = nn.ConvTranspose2d(32, 1, 1, stride=(1, 1))
+        return
 
-    def forward(self, x):
+    def forward(self, z):
         """
 
         :param inputs: (batch, seq_len, dim)
         with seq = num_blocks * block_size
         :return: z: (batch,
         """
-        y = self.convolution_stack(x)
-        y = y.view(y.size(0), -1)
-        z = self.z_mapping(y)
-        return z
+        y = self.to_deconv_stack(z)
+        y = y.view(-1, *self.deconv_input_shape)
+        # deconvolution stack
+        y = self.deconv1(y)
+        y = F.relu(y)
+        y = self.deconv2(y)
+        y = F.relu(y)
+        y = self.deconv3(y)
+        x = F.sigmoid(y)
+        return x
