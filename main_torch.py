@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from avgn.pytorch.decoder import Decoder
 from avgn.pytorch.encoder import Encoder
 from avgn.pytorch.getters import get_model
-from avgn.pytorch.spectro_dataset import SpectroDataset
+from avgn.pytorch.spectro_dataset import SpectroDataset, cuda_variable
 from avgn.utils.paths import DATA_DIR, MODEL_DIR
 
 
@@ -122,9 +122,9 @@ def epoch(model, optimizer, dataloader, training):
         model.eval()
     losses = []
     for batch_idx, data in enumerate(dataloader):
-
+        data_cuda = cuda_variable(torch.tensor(data))
         optimizer.zero_grad()
-        loss = model.step(data)
+        loss = model.step(data_cuda)
         if training:
             loss.backward()
             optimizer.step()

@@ -25,10 +25,9 @@ class SpectroDataset(Dataset):
         if torch.is_tensor(idx):
             idx = idx.tolist()
         x_np = np.array(self.syllable_df.spectrogram[idx]).astype(np.float32) / 255.
-        x_cuda = cuda_variable(torch.tensor(x_np))
         # conv in pytorch are
         # (batch, channel, height, width)
-        sample = x_cuda.unsqueeze(0)
+        sample = np.expand_dims(x_np, axis=0)
         return sample
 
 
