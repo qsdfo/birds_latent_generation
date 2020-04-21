@@ -121,7 +121,7 @@ def epoch(model, optimizer, dataloader, training, device):
         model.eval()
     losses = []
     for batch_idx, data in enumerate(dataloader):
-        data_cuda = torch.from_numpy(data).to(device)
+        data_cuda = data.to(device)
         optimizer.zero_grad()
         loss = model.step(data_cuda)
         if training:
