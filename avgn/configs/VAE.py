@@ -4,7 +4,7 @@ from pathlib import Path
 config = {
     # --- Model ---
     'model_type': 'VAE',
-        'n_z': 32,
+    'n_z': 32,
     'decoder_kwargs': dict(),
     'encoder_kwargs': dict(),
     'model_kwargs': dict(),
@@ -18,6 +18,7 @@ config = {
     # ======== Training ========
     'lr':                          1e-4,
     'batch_size':                  512,
+    'num_epochs':                  500,
 
     # ======== model ID ========
     'timestamp':                   None,
