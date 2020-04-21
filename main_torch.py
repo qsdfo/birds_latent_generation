@@ -3,15 +3,14 @@ import os
 from datetime import datetime
 
 import click
-import numpy as np
 import pandas as pd
 import torch
-from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data import DataLoader
 
 from avgn.pytorch.decoder import Decoder
 from avgn.pytorch.encoder import Encoder
 from avgn.pytorch.getters import get_model
-from avgn.pytorch.spectro_dataset import SpectroDataset, cuda_variable
+from avgn.pytorch.spectro_dataset import SpectroDataset
 from avgn.utils.paths import DATA_DIR, MODEL_DIR
 
 
