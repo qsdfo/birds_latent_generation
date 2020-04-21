@@ -98,6 +98,7 @@ def main(plot,
 
     ##################################################################################
     print(f'##### Training')
+    best_val_loss = float('inf')
     if train:
         for ind_epoch in range(config['num_epochs']):
             train_loss = epoch(model, optimizer, train_dataloader, training=True)
@@ -105,6 +106,13 @@ def main(plot,
             print(f'Epoch {ind_epoch}:')
             print(f'Train loss {train_loss}:')
             print(f'Val loss {val_loss}:')
+
+            if (val_loss < best_val_loss) or (ind_epoch % 10 == 0):
+                savedir = MODEL_DIR / f'{config["model_type"]}-{ind_epoch}-{timestamp}'
+                if os.path.isdir(savedir):
+                    os.rmdir(savedir)
+                os.mkdir(savedir)
+                model.save(path=savedir)
 
 
 def epoch(model, optimizer, dataloader, training):
@@ -114,6 +122,7 @@ def epoch(model, optimizer, dataloader, training):
         model.eval()
     losses = []
     for batch_idx, data in enumerate(dataloader):
+
         optimizer.zero_grad()
         loss = model.step(data)
         if training:
