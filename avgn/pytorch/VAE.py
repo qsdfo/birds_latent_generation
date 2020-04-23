@@ -1,3 +1,5 @@
+import os
+
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -9,26 +11,21 @@ class VAE(nn.Module):
         tf.keras.Model
     """
 
-    def __init__(self, encoder, decoder, beta=1.0):
+    def __init__(self, encoder, decoder, model_dir, beta=1.0):
         super(VAE, self).__init__()
         self.beta = beta
         self.enc = encoder
         self.dec = decoder
         self.n_z = encoder.n_z
+        self.model_dir = model_dir
 
-    def save(self, path):
-        torch.save(self.state_dict(), f'{path}/model')
+    def save(self, name):
+        if not os.path.isdir(f'{self.model_dir}/weights'):
+            os.mkdir(f'{self.model_dir}/weights')
+        torch.save(self.state_dict(), f'{self.model_dir}/weights/{name}')
 
-    def load(self, path, device):
-        self.load_state_dict(torch.load(f'{path}/model', map_location=torch.device(device)))
-
-    def save_model(self, path):
-        self.enc.save_weights(f'{path}/encoder.h5')
-        self.dec.save_weights(f'{path}/decoder.h5')
-
-    def load_model(self, path):
-        self.enc.load_weights(f'{path}/encoder.h5')
-        self.dec.load_weights(f'{path}/decoder.h5')
+    def load(self, name, device):
+        self.load_state_dict(torch.load(f'{self.model_dir}/weights/{name}', map_location=torch.device(device)))
 
     def reparameterize(self, mu, logvar):
         std = torch.exp(0.5 * logvar)
@@ -56,6 +53,15 @@ class VAE(nn.Module):
         x_flat = x.view(batch_dim, -1)
         loss = self.loss_function(recon_batch_flat, x_flat, mu, logvar, self.beta)
         return loss
+
+    def reconstruct(self, x):
+        return self(x)[0]
+
+    def generate(self, batch_dim):
+        # Prior is a gaussian w/ mean 0 and variance 1
+        z = torch.randn(batch_dim, self.n_z)
+        x = self.decode(z)
+        return x
 
     # Reconstruction + KL divergence losses summed over all elements and batch
     @staticmethod
