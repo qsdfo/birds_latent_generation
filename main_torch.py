@@ -169,12 +169,16 @@ def plot_reconstruction(model, dataloader, device, savepath):
     # Plot
     dims = x_recon.shape[2:]
     num_examples = x_recon.shape[0]
-    fig, ax = plt.subplots(nrows=2, ncols=num_examples)
+    fig, axes = plt.subplots(nrows=2, ncols=num_examples)
     for i in range(num_examples):
         # show the image
-        ax[0, i].matshow(data[i].reshape(dims), origin="lower")
-        ax[1, i].matshow(x_recon[i].reshape(dims), origin="lower")
+        axes[0, i].matshow(data[i].reshape(dims), origin="lower")
+        axes[1, i].matshow(x_recon[i].reshape(dims), origin="lower")
+    for ax in fig.get_axes():
+        ax.set_xticks([])
+        ax.set_yticks([])
     plt.savefig(savepath)
+    plt.clf()
 
 
 def plot_generation(model, num_examples, device, savepath):
@@ -183,11 +187,15 @@ def plot_generation(model, num_examples, device, savepath):
     gen = model.generate(batch_dim=num_examples).cpu().detach().numpy()
     # plot
     dims = gen.shape[2:]
-    fig, ax = plt.subplots(ncols=num_examples)
+    fig, axes = plt.subplots(ncols=num_examples)
     for i in range(num_examples):
         # show the image
-        ax[i].matshow(gen[i].reshape(dims), origin="lower")
+        axes[i].matshow(gen[i].reshape(dims), origin="lower")
+    for ax in fig.get_axes():
+        ax.set_xticks([])
+        ax.set_yticks([])
     plt.savefig(savepath)
+    plt.clf()
 
 
 def epoch(model, optimizer, dataloader, num_batches, training, device):
