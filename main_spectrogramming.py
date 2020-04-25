@@ -140,8 +140,9 @@ def main(debug):
 
     ################################################################################
     print('Pad Spectrograms')
-    # Take 1 secondes max
-    pad_length = int(1 * (1000 / hparams.hop_length_ms))
+    # Take 1 secondes max, but a bit more to have square spectrograms, so 128
+    # pad_length = int(1 * (1000 / hparams.hop_length_ms))
+    pad_length = 128
     syllables_spec_padded = []
     for ind, spec in enumerate(syllables_spec):
         if spec.shape[1] > pad_length:
