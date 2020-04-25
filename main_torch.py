@@ -159,10 +159,10 @@ def main(plot,
                 test_dataloader = get_dataloader(dataset_type=config['dataset'], dataset=dataset_val,
                                                  batch_size=num_examples_plot, shuffle=False)
                 savepath = f'{model.model_dir}/plots/reconstruction_{ind_epoch}'
-                plot_reconstruction(model, hparams, config['model_type'], test_dataloader, device, savepath)
+                plot_reconstruction(model, hparams, test_dataloader, device, savepath)
 
                 savepath = f'{model.model_dir}/plots/generations_{ind_epoch}'
-                plot_generation(model, hparams, config['model_type'], num_examples_plot, savepath)
+                plot_generation(model, hparams, num_examples_plot, savepath)
 
                 del test_dataloader
 
@@ -175,12 +175,13 @@ def plot_reconstruction(model, hparams, dataloader, device, savepath):
         x_recon = model.reconstruct(data_cuda).cpu().detach().numpy()
         break
     # Plot
+    x = data.cpu().detach().numpy()
     dims = x_recon.shape[2:]
     num_examples = x_recon.shape[0]
     fig, axes = plt.subplots(nrows=2, ncols=num_examples)
     for i in range(num_examples):
         # show the image
-        axes[0, i].matshow(data[i].reshape(dims), origin="lower")
+        axes[0, i].matshow(x[i].reshape(dims), origin="lower")
         axes[1, i].matshow(x_recon[i].reshape(dims), origin="lower")
     for ax in fig.get_axes():
         ax.set_xticks([])
@@ -193,9 +194,9 @@ def plot_reconstruction(model, hparams, dataloader, device, savepath):
         mel_basis = build_mel_basis(hparams, hparams.sr, hparams.sr)
         mel_inversion_basis = build_mel_inversion_basis(mel_basis)
         for i in range(num_examples):
-            original_audio = inv_spectrogram_librosa(data[i], hparams.sr, hparams,
+            original_audio = inv_spectrogram_librosa(x[i, 0], hparams.sr, hparams,
                                                      mel_inversion_basis=mel_inversion_basis)
-            recon_audio = inv_spectrogram_librosa(x_recon[i], hparams.sr, hparams,
+            recon_audio = inv_spectrogram_librosa(x_recon[i, 0], hparams.sr, hparams,
                                                   mel_inversion_basis=mel_inversion_basis)
             librosa.output.write_wav(f'{savepath}_original.wav', original_audio, sr=hparams.sr, norm=True)
             librosa.output.write_wav(f'{savepath}_recon.wav', recon_audio, sr=hparams.sr, norm=True)
@@ -223,7 +224,7 @@ def plot_generation(model, hparams, num_examples, savepath):
         mel_basis = build_mel_basis(hparams, hparams.sr, hparams.sr)
         mel_inversion_basis = build_mel_inversion_basis(mel_basis)
         for i in range(num_examples):
-            gen_audio = inv_spectrogram_librosa(gen, hparams.sr, hparams, mel_inversion_basis=mel_inversion_basis)
+            gen_audio = inv_spectrogram_librosa(gen[i, 0], hparams.sr, hparams, mel_inversion_basis=mel_inversion_basis)
             librosa.output.write_wav(f'{savepath}.wav', gen_audio, sr=hparams.sr, norm=True)
 
 
