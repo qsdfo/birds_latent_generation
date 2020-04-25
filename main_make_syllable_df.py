@@ -1,20 +1,20 @@
+import pickle
+
 import click
-import numpy as np
 import matplotlib.pyplot as plt
-from tqdm import tqdm
-from joblib import Parallel, delayed
+import numpy as np
 import pandas as pd
-
-from avgn.utils.paths import DATA_DIR, most_recent_subdirectory, ensure_dir
-
-from avgn.utils.hparams import HParams
-from avgn.dataset import DataSet
-from avgn.signalprocessing.create_spectrogram_dataset import prepare_wav, create_label_df, get_row_audio
-
-from avgn.visualization.spectrogram import draw_spec_set
-from avgn.signalprocessing.create_spectrogram_dataset import make_spec, mask_spec, log_resize_spec, pad_spectrogram
-
 import seaborn as sns
+from avgn.utils.audio import load_wav, int16_to_float32
+from joblib import Parallel, delayed
+from tqdm import tqdm
+
+from avgn.dataset import DataSet
+from avgn.signalprocessing.create_spectrogram_dataset import create_label_df, get_row_audio, make_spec, \
+    log_resize_spec, pad_spectrogram
+from avgn.utils.hparams import HParams
+from avgn.utils.paths import DATA_DIR, ensure_dir
+from avgn.visualization.spectrogram import draw_spec_set
 
 
 @click.command()
@@ -23,8 +23,8 @@ import seaborn as sns
 def main(n_jobs,
          plot):
 
-    DATASET_ID = 'BIRD_DB_CATH_segmented'
-    # DATASET_ID = 'Test_segmented'
+    # DATASET_ID = 'BIRD_DB_CATH_segmented'
+    DATASET_ID = 'Test_segmented'
 
     ################################################################################
     print('Create dataset')
@@ -38,8 +38,8 @@ def main(n_jobs,
         ref_level_db=20,
         min_level_db=-60,
         mask_spec=True,
-        win_length_ms=10,
-        hop_length_ms=2,
+        win_length_ms=None,
+        hop_length_ms=None,
         mask_spec_kwargs={"spec_thresh": 0.9, "offset": 1e-10},
         n_jobs=n_jobs,
         verbosity=1,
@@ -131,17 +131,17 @@ def main(n_jobs,
         )
 
     ################################################################################
-    print('Rescale Spectrograms')
-    log_scaling_factor = 4
-    with Parallel(n_jobs=n_jobs, verbose=verbosity) as parallel:
-        syllables_spec = parallel(
-            delayed(log_resize_spec)(spec, scaling_factor=log_scaling_factor)
-            for spec in tqdm(syllables_spec, desc="scaling spectrograms", leave=False)
-        )
-    # Filter syllables badly shaped (often too shorts)
-    syllables_spec = [e for e in syllables_spec if e is not None]
-    if plot:
-        draw_spec_set(syllables_spec, zoom=1, maxrows=10, colsize=25)
+    # print('Rescale Spectrograms')
+    # log_scaling_factor = 12
+    # with Parallel(n_jobs=n_jobs, verbose=verbosity) as parallel:
+    #     syllables_spec = parallel(
+    #         delayed(log_resize_spec)(spec, scaling_factor=log_scaling_factor)
+    #         for spec in tqdm(syllables_spec, desc="scaling spectrograms", leave=False)
+    #     )
+    # # Filter syllables badly shaped (often too shorts)
+    # syllables_spec = [e for e in syllables_spec if e is not None]
+    # if plot:
+    #     draw_spec_set(syllables_spec, zoom=1, maxrows=10, colsize=25)
 
     ################################################################################
     print('Pad Spectrograms')
@@ -188,107 +188,22 @@ def main(n_jobs,
     ensure_dir(save_loc)
     syllable_df.to_pickle(save_loc)
 
-
-def encoder(X, reuse=False, scope='content_encoder', verbose=False, discriminator=False):
-    n_downsample = self.n_downsample
-    channel = self.ch
-    if discriminator == False:
-        n_res = self.n_res
-    else:
-        n_res = self.n_res  # - 2
-        channel = channel / 2
-
-    ###### Content Encoder
-    with tf.variable_scope("content_enc"):
-        content_net = [tf.reshape(X, [self.batch_size, self.dims[0], self.dims[1], self.dims[2]])]
-        content_net.append(relu(
-            conv(content_net[len(content_net) - 1], channel, kernel=7, stride=1, pad=3, pad_type='reflect',
-                 scope='conv_0')))
-
-        for i in range(n_downsample):
-            content_net.append(relu(
-                conv(content_net[len(content_net) - 1], channel * 2, kernel=4, stride=2, pad=1, pad_type='reflect',
-                     scope='conv_' + str(i + 1))))
-            channel = channel * 2
-
-        for i in range(n_res):
-            content_net.append(resblock(content_net[len(content_net) - 1], channel, scope='resblock_' + str(i)))
-
-        if discriminator == False:
-            content_net.append(
-                linear(content_net[len(content_net) - 1], self.n_hidden, use_bias=True, scope='linear'))
-        content_shapes = [shape(i) for i in content_net]
-
-        if verbose: print('content_net shapes: ', content_shapes)
-    if discriminator == False:
-        channel = self.ch
-    else:
-        channel = self.ch / 2
-
-    ###### Style Encoder
-    with tf.variable_scope("style_enc"):
-
-        # IN removes the original feature mean and variance that represent important style information
-        style_net = [tf.reshape(X, [self.batch_size, self.dims[0], self.dims[1], self.dims[2]])]
-        style_net.append(conv(style_net[len(style_net) - 1], channel, kernel=7, stride=1, pad=3, pad_type='reflect',
-                              scope='conv_0'))
-        style_net.append(relu(style_net[len(style_net) - 1]))
-
-        for i in range(2):
-            style_net.append(relu(
-                conv(style_net[len(style_net) - 1], channel * 2, kernel=4, stride=2, pad=1, pad_type='reflect',
-                     scope='conv_' + str(i + 1))))
-            channel = channel * 2
-
-        for i in range(2):
-            style_net.append(relu(
-                conv(style_net[len(style_net) - 1], channel, kernel=4, stride=2, pad=1, pad_type='reflect',
-                     scope='down_conv_' + str(i))))
-
-        style_net.append(adaptive_avg_pooling(style_net[len(style_net) - 1]))  # global average pooling
-        style_net.append(conv(style_net[len(style_net) - 1], self.style_dim, kernel=1, stride=1, scope='SE_logit'))
-        style_shapes = [shape(i) for i in style_net]
-        if verbose: print('style_net shapes: ', style_shapes)
-
-    return style_net, content_net
-
-def decoder(z_x_style, z_x_content, reuse=False, scope="content_decoder", verbose=False, discriminator=False):
-    channel = self.mlp_dim
-    n_upsample = self.n_upsample
-    if discriminator == False:
-        n_res = self.n_res
-        z_x_content = tf.reshape(linear(z_x_content, (self.dims[0] / (2 ** self.n_sample)) * (
-                    self.dims[0] / (2 ** self.n_sample)) * (self.ch * self.n_sample ** 2)), (
-                                 self.batch_size, int(self.dims[0] / (2 ** self.n_sample)),
-                                 int(self.dims[0] / (2 ** self.n_sample)), int(self.ch * self.n_sample ** 2)))
-    else:
-        n_res = self.n_res  # - 2
-        channel = channel / 2
-    dec_net = [z_x_content]
-    mu, sigma = self.MLP(z_x_style, discriminator=discriminator)
-    for i in range(n_res):
-        dec_net.append(
-            adaptive_resblock(dec_net[len(dec_net) - 1], channel, mu, sigma, scope='adaptive_resblock' + str(i)))
-
-    for i in range(n_upsample):
-        # # IN removes the original feature mean and variance that represent important style information
-        dec_net.append(up_sample(dec_net[len(dec_net) - 1], scale_factor=2))
-        dec_net.append(conv(dec_net[len(dec_net) - 1], channel // 2, kernel=5, stride=1, pad=2, pad_type='reflect',
-                            scope='conv_' + str(i)))
-        dec_net.append(relu(layer_norm(dec_net[len(dec_net) - 1], scope='layer_norm_' + str(i))))
-
-        channel = channel // 2
-    dec_net.append(
-        conv(dec_net[len(dec_net) - 1], channels=self.img_ch, kernel=7, stride=1, pad=3, pad_type='reflect',
-             scope='G_logit'))
-    dec_net.append(tf.reshape(tf.sigmoid(dec_net[len(dec_net) - 1]),
-                              [self.batch_size, self.dims[0] * self.dims[1] * self.dims[2]]))
-    dec_shapes = [shape(i) for i in dec_net]
-    if verbose: print('Decoder shapes: ', dec_shapes)
-    return dec_net
-
+    ################################################################################
+    # Save data processings
+    mel_matrix = dataset.mel_matrix
+    hparams = dataset.hparams
+    with np.errstate(divide="ignore", invalid="ignore"):
+        mel_inverse_matrix = np.nan_to_num(
+            np.divide(mel_matrix, np.sum(mel_matrix.T, axis=1))
+        ).T
+    data_processing = {
+        'hparams': hparams,
+        'mel_matrix': mel_matrix,
+        'mel_inverse_matrix': mel_inverse_matrix,
+    }
+    save_loc = DATA_DIR / 'syllable_dfs' / DATASET_ID / 'data_processing.pickle'
+    with open(save_loc, 'wb') as ff:
+        pickle.dump(data_processing, ff)
 
 if __name__ == '__main__':
     main()
-
-

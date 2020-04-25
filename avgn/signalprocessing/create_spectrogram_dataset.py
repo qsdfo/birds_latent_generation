@@ -1,103 +1,23 @@
-from collections import OrderedDict
-from avgn.utils.json import read_json
-from avgn.utils.audio import load_wav
-from avgn.utils.audio import float32_to_int16, int16_to_float32
+import collections
+
+import librosa
+import noisereduce as nr
 import numpy as np
-from avgn.signalprocessing.spectrogramming import spectrogram
-from avgn.signalprocessing.filtering import butter_bandpass_filter
-from joblib import Parallel, delayed
-from tqdm.autonotebook import tqdm
 import pandas as pd
 from PIL import Image
-import noisereduce as nr
+from joblib import Parallel, delayed
+from tqdm.autonotebook import tqdm
+
+from avgn.signalprocessing.filtering import butter_bandpass_filter
+from avgn.utils.audio import int16_to_float32
 
 
 def flatten_spectrograms(specs):
     return np.reshape(specs, (np.shape(specs)[0], np.prod(np.shape(specs)[1:])))
 
 
-def subset_syllables(
-    json_dict, indv, unit="syllables", hparams=None, include_labels=True
-):
-    """ Grab syllables from wav data
-    """
-    if type(indv) == list:
-        indv = indv[0]
-    if type(json_dict) != OrderedDict:
-        json_dict = read_json(json_dict)
-    # get unit info
-    start_times = json_dict["indvs"][indv][unit]["start_times"]
-    # stop times vs end_times is a quick fix that should be fixed on the parsing side
-    if "end_times" in json_dict["indvs"][indv][unit].keys():
-        end_times = json_dict["indvs"][indv][unit]["end_times"]
-    else:
-        end_times = json_dict["indvs"][indv][unit]["stop_times"]
-    if include_labels:
-        labels = json_dict["indvs"][indv][unit]["labels"]
-    else:
-        labels = None
-    # get rate and date
-    rate, data = load_wav(json_dict["wav_loc"])
-
-    # convert data if needed
-    if np.issubdtype(type(data[0]), np.integer):
-        data = int16_to_float32(data)
-    # bandpass filter
-    if hparams is not None:
-        data = butter_bandpass_filter(
-            data, hparams.butter_lowcut, hparams.butter_highcut, rate, order=5
-        )
-
-        # reduce noise
-        if hparams.reduce_noise:
-            data = nr.reduce_noise(
-                audio_clip=data, noise_clip=data, **hparams.noise_reduce_kwargs
-            )
-    syllables = [
-        data[int(st * rate) : int(et * rate)] for st, et in zip(start_times, end_times)
-    ]
-    return syllables, rate, labels
-
-
 def norm(x):
     return (x - np.min(x)) / (np.max(x) - np.min(x))
-
-
-def make_spec(
-    syll_wav,
-    fs,
-    hparams,
-    mel_matrix=None,
-    use_tensorflow=False,
-    use_mel=True,
-    return_tensor=False,
-    norm_uint8=False,
-):
-    """
-    """
-    if use_tensorflow:
-        import tensorflow as tf
-        from avgn.signalprocessing.spectrogramming_tf import spectrogram_tensorflow
-    # convert to float
-    if type(syll_wav[0]) == int:
-        syll_wav = int16_to_float32(syll_wav)
-
-    # create spec
-
-    if use_tensorflow:
-        spec = spectrogram_tensorflow(syll_wav, fs, hparams)
-        if use_mel:
-            spec = tf.transpose(tf.tensordot(spec, mel_matrix, 1))
-            if not return_tensor:
-                spec = spec.numpy()
-    else:
-        spec = spectrogram(syll_wav, fs, hparams)
-        if use_mel:
-            spec = np.dot(spec.T, mel_matrix).T
-    if norm_uint8:
-        spec = (norm(spec) * 255).astype("uint8")
-
-    return spec
 
 
 def log_resize_spec(spec, scaling_factor=10):
@@ -115,9 +35,6 @@ def pad_spectrogram(spectrogram, pad_length):
     return np.pad(
         spectrogram, [(0, 0), (pad_left, pad_right)], "constant", constant_values=0
     )
-
-
-import collections
 
 
 def list_match(_list, list_of_lists):
@@ -263,60 +180,41 @@ def create_syllable_df(
         return syllable_df
 
 
-def get_element(
-    datafile, indv=None, element_number=1, element="syllable", hparams=None
-):
-
-    # if an individual isnt specified, grab the first one
-    if indv == None:
-        indv = datafile.indvs[0]
-
-    # get the element
-    element = datafile.data["indvs"][indv][element]
-
-    # get the part of the wav we want to load
-    st = element["start_times"][element_number]
-    et = element["end_times"][element_number]
-
-    # load the data
-    rate, element = load_wav(
-        datafile.data["wav_loc"], offset=st, duration=et - st, sr=None
-    )
-
-    if np.issubdtype(type(element[0]), np.integer):
-        element = int16_to_float32(data)
-
-    if hparams is not None:
-        element = butter_bandpass_filter(
-            element, hparams.butter_lowcut, hparams.butter_highcut, rate, order=5
-        )
-
-    return rate, element
 
 
-def prepare_wav(wav_loc, hparams=None):
+
+def prepare_wav(wav_loc, hparams, dump_folder, debug):
     """ load wav and convert to correct format
     """
 
     # get rate and date
-    rate, data = load_wav(wav_loc)
+    # rate, data = load_wav(wav_loc)
+
+    data, _ = librosa.core.load(wav_loc, sr=hparams.sr)
+    if debug:
+        librosa.output.write_wav(f'{dump_folder}/original.wav', data, sr=hparams.sr, norm=True)
 
     # convert data if needed
     if np.issubdtype(type(data[0]), np.integer):
         data = int16_to_float32(data)
+
     # bandpass filter
     if hparams is not None:
         data = butter_bandpass_filter(
-            data, hparams.butter_lowcut, hparams.butter_highcut, rate, order=5
+            data, hparams.butter_lowcut, hparams.butter_highcut, hparams.sr, order=5
         )
+        if debug:
+            librosa.output.write_wav(f'{dump_folder}/butter_bandpass_filter.wav', data, sr=hparams.sr, norm=True)
 
         # reduce noise
         if hparams.reduce_noise:
             data = nr.reduce_noise(
                 audio_clip=data, noise_clip=data, **hparams.noise_reduce_kwargs
             )
+        if debug:
+            librosa.output.write_wav(f'{dump_folder}/reduce_noise.wav', data, sr=hparams.sr, norm=True)
 
-    return rate, data
+    return data
 
 
 def create_label_df(
@@ -373,7 +271,7 @@ def get_row_audio(syllable_df, wav_loc, hparams):
     
     # get audio for each syllable
     syllable_df["audio"] = [
-        data[int(st * rate) : int(et * rate)]
+        data[int(st * rate):int(et * rate)]
         for st, et in zip(syllable_df.start_time.values, syllable_df.end_time.values)
     ]
 

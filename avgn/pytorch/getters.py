@@ -7,6 +7,7 @@ def get_model(model_type, model_kwargs, encoder, decoder, model_dir):
     if model_type == 'VAE':
         return VAE(encoder=encoder,
                    decoder=decoder,
+                   beta=model_kwargs['beta'],
                    model_dir=model_dir)
     else:
         return None

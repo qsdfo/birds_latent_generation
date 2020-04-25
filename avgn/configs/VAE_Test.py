@@ -15,7 +15,9 @@ config = {
                       nn.ConvTranspose2d(32, 1, 1, stride=(1, 1))]
     ),
     'encoder_kwargs': dict(),
-    'model_kwargs': dict(),
+    'model_kwargs': dict(
+        beta=1.0
+    ),
 
     # --- Dataloader ---
     'dataloader_generator_kwargs': dict(),
@@ -25,8 +27,9 @@ config = {
 
     # ======== Training ========
     'lr': 1e-4,
-    'batch_size': 3,
-    'num_epochs': 500,
+    'batch_size': 64,
+    'num_batches': 512,
+    'num_epochs': 50,
 
     # ======== model ID ========
     'timestamp': None,

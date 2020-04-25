@@ -1,9 +1,11 @@
 import importlib
 import os
+import pickle
 import shutil
 from datetime import datetime
 
 import click
+import librosa
 import matplotlib.pyplot as plt
 import pandas as pd
 import torch
@@ -13,6 +15,7 @@ from avgn.pytorch.decoder import Decoder
 from avgn.pytorch.encoder import Encoder
 from avgn.pytorch.getters import get_model, get_dataloader
 from avgn.pytorch.spectro_dataset import SpectroDataset
+from avgn.signalprocessing.spectrogramming import build_mel_basis, build_mel_inversion_basis, inv_spectrogram_librosa
 from avgn.utils.paths import DATA_DIR, MODEL_DIR
 
 
@@ -65,6 +68,7 @@ def main(plot,
                                          transforms.ToTensor(),
                                          transforms.Normalize((0.1307,), (0.3081,))
                                      ]))
+        hparams = None
     else:
         df_loc = DATA_DIR / 'syllable_dfs' / dataset_name / 'data.pickle'
         syllable_df = pd.read_pickle(df_loc)
@@ -74,6 +78,10 @@ def main(plot,
         syllable_df_val = syllable_df.iloc[int(split * num_examples):].reset_index()
         dataset_train = SpectroDataset(syllable_df_train)
         dataset_val = SpectroDataset(syllable_df_val)
+
+        hparams_loc = DATA_DIR / 'syllable_dfs' / dataset_name / 'hparams.pickle'
+        with open(hparams_loc, 'rb') as ff:
+            hparams = pickle.load(ff)
 
     # Get dimensions
     val_dataloader = get_dataloader(dataset_type=config['dataset'],
@@ -150,16 +158,16 @@ def main(plot,
                 # Plots
                 test_dataloader = get_dataloader(dataset_type=config['dataset'], dataset=dataset_val,
                                                  batch_size=num_examples_plot, shuffle=False)
-                savepath = f'{model.model_dir}/plots/reconstruction_{ind_epoch}.pdf'
-                plot_reconstruction(model, test_dataloader, device, savepath)
+                savepath = f'{model.model_dir}/plots/reconstruction_{ind_epoch}'
+                plot_reconstruction(model, hparams, config['model_type'], test_dataloader, device, savepath)
 
-                savepath = f'{model.model_dir}/plots/generations_{ind_epoch}.pdf'
-                plot_generation(model, num_examples_plot, device, savepath)
+                savepath = f'{model.model_dir}/plots/generations_{ind_epoch}'
+                plot_generation(model, hparams, config['model_type'], num_examples_plot, savepath)
 
                 del test_dataloader
 
 
-def plot_reconstruction(model, dataloader, device, savepath):
+def plot_reconstruction(model, hparams, dataloader, device, savepath):
     # Forward pass
     model.eval()
     for _, data in enumerate(dataloader):
@@ -177,14 +185,27 @@ def plot_reconstruction(model, dataloader, device, savepath):
     for ax in fig.get_axes():
         ax.set_xticks([])
         ax.set_yticks([])
-    plt.savefig(savepath)
+    plt.savefig(f'{savepath}.pdf')
     plt.clf()
 
+    # audio
+    if hparams is not None:
+        mel_basis = build_mel_basis(hparams, hparams.sr, hparams.sr)
+        mel_inversion_basis = build_mel_inversion_basis(mel_basis)
+        for i in range(num_examples):
+            original_audio = inv_spectrogram_librosa(data[i], hparams.sr, hparams,
+                                                     mel_inversion_basis=mel_inversion_basis)
+            recon_audio = inv_spectrogram_librosa(x_recon[i], hparams.sr, hparams,
+                                                  mel_inversion_basis=mel_inversion_basis)
+            librosa.output.write_wav(f'{savepath}_original.wav', original_audio, sr=hparams.sr, norm=True)
+            librosa.output.write_wav(f'{savepath}_recon.wav', recon_audio, sr=hparams.sr, norm=True)
 
-def plot_generation(model, num_examples, device, savepath):
+
+def plot_generation(model, hparams, num_examples, savepath):
     # forward pass
     model.eval()
     gen = model.generate(batch_dim=num_examples).cpu().detach().numpy()
+
     # plot
     dims = gen.shape[2:]
     fig, axes = plt.subplots(ncols=num_examples)
@@ -194,8 +215,16 @@ def plot_generation(model, num_examples, device, savepath):
     for ax in fig.get_axes():
         ax.set_xticks([])
         ax.set_yticks([])
-    plt.savefig(savepath)
+    plt.savefig(f'{savepath}.pdf')
     plt.clf()
+
+    # audio
+    if hparams is not None:
+        mel_basis = build_mel_basis(hparams, hparams.sr, hparams.sr)
+        mel_inversion_basis = build_mel_inversion_basis(mel_basis)
+        for i in range(num_examples):
+            gen_audio = inv_spectrogram_librosa(gen, hparams.sr, hparams, mel_inversion_basis=mel_inversion_basis)
+            librosa.output.write_wav(f'{savepath}.wav', gen_audio, sr=hparams.sr, norm=True)
 
 
 def epoch(model, optimizer, dataloader, num_batches, training, device):
