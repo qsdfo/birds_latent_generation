@@ -26,6 +26,8 @@ def main(debug):
 
     if debug:
         dump_folder = DATA_DIR / 'dump' / 'spectrogramming'
+    else:
+        dump_folder = None
 
     ################################################################################
     print('Create dataset')

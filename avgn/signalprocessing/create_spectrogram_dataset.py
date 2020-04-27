@@ -180,9 +180,6 @@ def create_syllable_df(
         return syllable_df
 
 
-
-
-
 def prepare_wav(wav_loc, hparams, dump_folder, debug):
     """ load wav and convert to correct format
     """
