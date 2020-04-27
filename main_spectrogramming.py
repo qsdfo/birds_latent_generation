@@ -179,10 +179,11 @@ def main(debug):
 
     ################################################################################
     print('Save dataset')
-    save_loc = DATA_DIR / 'syllable_dfs' / DATASET_ID / 'data.pickle'
+    suffix = hparams.__repr__()
+    save_loc = DATA_DIR / 'syllable_dfs' / DATASET_ID / f'data_{suffix}.pickle'
     ensure_dir(save_loc)
     syllable_df.to_pickle(save_loc)
-    save_loc = DATA_DIR / 'syllable_dfs' / DATASET_ID / 'hparams.pickle'
+    save_loc = DATA_DIR / 'syllable_dfs' / DATASET_ID / f'hparams_{suffix}.pickle'
     with open(save_loc, 'wb') as ff:
         pickle.dump(hparams, ff)
 

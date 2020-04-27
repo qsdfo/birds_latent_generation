@@ -62,6 +62,7 @@ def plot_reconstruction(model, dataloader, device, savepath):
         ax.set_xticks([])
         ax.set_yticks([])
     plt.savefig(savepath)
+    plt.close()
     plt.clf()
 
 
@@ -79,6 +80,7 @@ def plot_generation(model, num_examples, savepath):
         ax.set_xticks([])
         ax.set_yticks([])
     plt.savefig(savepath)
+    plt.close()
     plt.clf()
 
 

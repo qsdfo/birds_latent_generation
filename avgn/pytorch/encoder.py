@@ -1,4 +1,5 @@
 from torch import nn
+import torch.nn.functional as F
 
 
 class Encoder(nn.Module):
@@ -8,22 +9,18 @@ class Encoder(nn.Module):
     Uses positional embeddings
     """
 
-    def __init__(self, input_dim, n_z):
-        h_dim, w_dim = input_dim
+    def __init__(self, out_stack_dim, n_z, conv_stack):
         super(Encoder, self).__init__()
         self.n_z = n_z
-        self.convolution_stack = nn.Sequential(
-            nn.Conv2d(in_channels=1, out_channels=32, kernel_size=3, stride=(3, 3)),
-            nn.ReLU(),
-            nn.Conv2d(32, 64, 3, stride=(3, 3)),
-            nn.ReLU(),
-        )
-        in_features = (h_dim // (3 * 3)) * (w_dim // (3 * 3)) * 64
-        self.z_mapping = nn.Linear(in_features=in_features, out_features=n_z * 2)
+        self.conv_stack = nn.ModuleList(conv_stack)
+        self.z_mapping = nn.Linear(in_features=out_stack_dim, out_features=n_z * 2)
 
     def forward(self, x):
         # conv stack
-        y = self.convolution_stack(x)
+        y = x
+        for layer in range(len(self.conv_stack)):
+            y = self.conv_stack[layer](y)
+            y = F.relu(y)
         # flattening
         y = y.view(y.size(0), -1)
         # map to latent dim

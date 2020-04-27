@@ -102,7 +102,10 @@ def main(plot,
 
     ##################################################################################
     print(f'##### Model')
-    encoder = Encoder(input_dim=dims, n_z=config['n_z'])
+    encoder_kwargs = config['encoder_kwargs']
+    encoder = Encoder(out_stack_dim=encoder_kwargs['out_stack_dim'],
+                      n_z=config['n_z'],
+                      conv_stack=encoder_kwargs['conv_stack'],)
     decoder_kwargs = config['decoder_kwargs']
     decoder = Decoder(deconv_input_shape=decoder_kwargs['deconv_input_shape'],
                       deconv_stack=decoder_kwargs['deconv_stack'],
@@ -156,14 +159,14 @@ def main(plot,
                 model.save(name=ind_epoch)
 
                 # Plots
+                if not os.path.isdir(f'{model.model_dir}/plots/{ind_epoch}'):
+                    os.mkdir(f'{model.model_dir}/plots/{ind_epoch}')
                 test_dataloader = get_dataloader(dataset_type=config['dataset'], dataset=dataset_val,
                                                  batch_size=num_examples_plot, shuffle=False)
-                savepath = f'{model.model_dir}/plots/reconstruction_{ind_epoch}'
+                savepath = f'{model.model_dir}/plots/{ind_epoch}/reconstruction'
                 plot_reconstruction(model, hparams, test_dataloader, device, savepath)
-
-                savepath = f'{model.model_dir}/plots/generations_{ind_epoch}'
+                savepath = f'{model.model_dir}/plots/{ind_epoch}/generation'
                 plot_generation(model, hparams, num_examples_plot, savepath)
-
                 del test_dataloader
 
 
@@ -178,6 +181,7 @@ def plot_reconstruction(model, hparams, dataloader, device, savepath):
     x = data.cpu().detach().numpy()
     dims = x_recon.shape[2:]
     num_examples = x_recon.shape[0]
+    plt.clf()
     fig, axes = plt.subplots(nrows=2, ncols=num_examples)
     for i in range(num_examples):
         # show the image
@@ -187,7 +191,7 @@ def plot_reconstruction(model, hparams, dataloader, device, savepath):
         ax.set_xticks([])
         ax.set_yticks([])
     plt.savefig(f'{savepath}.pdf')
-    plt.clf()
+    plt.close('all')
 
     # audio
     if hparams is not None:
@@ -198,8 +202,8 @@ def plot_reconstruction(model, hparams, dataloader, device, savepath):
                                                      mel_inversion_basis=mel_inversion_basis)
             recon_audio = inv_spectrogram_librosa(x_recon[i, 0], hparams.sr, hparams,
                                                   mel_inversion_basis=mel_inversion_basis)
-            librosa.output.write_wav(f'{savepath}_original.wav', original_audio, sr=hparams.sr, norm=True)
-            librosa.output.write_wav(f'{savepath}_recon.wav', recon_audio, sr=hparams.sr, norm=True)
+            librosa.output.write_wav(f'{savepath}_{i}_original.wav', original_audio, sr=hparams.sr, norm=True)
+            librosa.output.write_wav(f'{savepath}_{i}_recon.wav', recon_audio, sr=hparams.sr, norm=True)
 
 
 def plot_generation(model, hparams, num_examples, savepath):
@@ -209,6 +213,7 @@ def plot_generation(model, hparams, num_examples, savepath):
 
     # plot
     dims = gen.shape[2:]
+    plt.clf()
     fig, axes = plt.subplots(ncols=num_examples)
     for i in range(num_examples):
         # show the image
@@ -217,7 +222,7 @@ def plot_generation(model, hparams, num_examples, savepath):
         ax.set_xticks([])
         ax.set_yticks([])
     plt.savefig(f'{savepath}.pdf')
-    plt.clf()
+    plt.close('all')
 
     # audio
     if hparams is not None:
@@ -225,7 +230,7 @@ def plot_generation(model, hparams, num_examples, savepath):
         mel_inversion_basis = build_mel_inversion_basis(mel_basis)
         for i in range(num_examples):
             gen_audio = inv_spectrogram_librosa(gen[i, 0], hparams.sr, hparams, mel_inversion_basis=mel_inversion_basis)
-            librosa.output.write_wav(f'{savepath}.wav', gen_audio, sr=hparams.sr, norm=True)
+            librosa.output.write_wav(f'{savepath}_{i}.wav', gen_audio, sr=hparams.sr, norm=True)
 
 
 def epoch(model, optimizer, dataloader, num_batches, training, device):
