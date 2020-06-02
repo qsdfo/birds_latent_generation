@@ -1,7 +1,9 @@
+import itertools
+import os
 import pickle
 
-import click
 import librosa
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
@@ -15,41 +17,44 @@ from avgn.utils.audio import int16_to_float32
 from avgn.utils.hparams import HParams
 from avgn.utils.paths import DATA_DIR, ensure_dir
 
-import matplotlib.pyplot as plt
 
-
-@click.command()
-@click.option('-d', '--debug', is_flag=True)
-def main(debug):
-    # DATASET_ID = 'BIRD_DB_CATH_segmented'
-    DATASET_ID = 'Test_segmented'
-
-    if debug:
-        dump_folder = DATA_DIR / 'dump' / 'spectrogramming'
-    else:
-        dump_folder = None
+def main(debug, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz, hop_length_ms, power):
+    # DATASET_ID = 'BIRD_DB_CATH'
+    DATASET_ID = 'Test'
+    ind_examples = [20, 40, 50, 60, 80, 100]
 
     ################################################################################
     print('Create dataset')
     hparams = HParams(
         sr=44100,
-        num_mel_bins=128,
-        n_fft=2048,
-        mel_lower_edge_hertz=500,
-        mel_upper_edge_hertz=8000,
-        butter_lowcut=500,
-        butter_highcut=8000,
+        num_mel_bins=num_mel_bins,
+        n_fft=n_fft,
+        mel_lower_edge_hertz=mel_lower_edge_hertz,
+        mel_upper_edge_hertz=mel_upper_edge_hertz,
+        power=power,  # for spectral inversion
+        butter_lowcut=mel_lower_edge_hertz,
+        butter_highcut=mel_upper_edge_hertz,
         ref_level_db=20,
         min_level_db=-60,
         mask_spec=False,
         win_length_ms=None,
-        hop_length_ms=10,
+        hop_length_ms=hop_length_ms,
         mask_spec_kwargs={"spec_thresh": 0.9, "offset": 1e-10},
         n_jobs=1,
         verbosity=1,
         reduce_noise=True,
         noise_reduce_kwargs={"n_std_thresh": 2.0, "prop_decrease": 0.8}
     )
+    suffix = hparams.__repr__()
+
+    if debug:
+        dump_folder = DATA_DIR / 'dump' / f'{suffix}'
+        if os.path.isdir(dump_folder):
+            os.rmdir(dump_folder)
+        os.mkdir(dump_folder)
+    else:
+        dump_folder = None
+
     dataset = DataSet(DATASET_ID, hparams=hparams)
     print(f'Number files: {len(dataset.data_files)}')
 
@@ -91,10 +96,8 @@ def main(debug):
     print(f'Number of syllable: {len(syllable_df)}')
 
     if debug:
-        for ind in range(len(syllable_df)):
-            if ind > 50:
-                break
-            librosa.output.write_wav(f'{dump_folder}/syllable_{ind}.wav', syllable_df.audio[ind],
+        for ind in ind_examples:
+            librosa.output.write_wav(f'{dump_folder}/{ind}_syllable.wav', syllable_df.audio[ind],
                                      sr=hparams.sr, norm=True)
 
     # Normalise ???
@@ -114,31 +117,28 @@ def main(debug):
         # create spec
         mel_basis = build_mel_basis(hparams, hparams.sr, hparams.sr)
         mel_inversion_basis = build_mel_inversion_basis(mel_basis)
-        melspec = spectrogram_librosa(syll_wav, hparams, _mel_basis=mel_basis)
+        melspec, spec_amp = spectrogram_librosa(syll_wav, hparams, _mel_basis=mel_basis)
         syllables_spec.append(melspec)
 
-        if debug and (ind < 50):
-            plt.clf()
-            plt.matshow(melspec, origin="lower")
-            plt.savefig(f'{dump_folder}/{ind}_mel_spec.pdf')
-            plt.close()
-
-            audio_reconstruct = inv_spectrogram_librosa(melspec, hparams.sr, hparams, mel_inversion_basis=mel_inversion_basis)
-            librosa.output.write_wav(f'{dump_folder}/{ind}_reconstruct.wav', audio_reconstruct,
+        if debug and (ind in ind_examples):
+            # melspec
+            # plt.clf()
+            # plt.matshow(melspec, origin="lower")
+            # plt.savefig(f'{dump_folder}/{ind}_melspec.pdf')
+            # plt.close()
+            audio_reconstruct = inv_spectrogram_librosa(melspec, hparams.sr, hparams,
+                                                        mel_inversion_basis=mel_inversion_basis)
+            librosa.output.write_wav(f'{dump_folder}/{ind}_melspec.wav', audio_reconstruct,
                                      sr=hparams.sr, norm=True)
-
-    ################################################################################
-    # print('Rescale Spectrograms')
-    # log_scaling_factor = 12
-    # with Parallel(n_jobs=n_jobs, verbose=verbosity) as parallel:
-    #     syllables_spec = parallel(
-    #         delayed(log_resize_spec)(spec, scaling_factor=log_scaling_factor)
-    #         for spec in tqdm(syllables_spec, desc="scaling spectrograms", leave=False)
-    #     )
-    # # Filter syllables badly shaped (often too shorts)
-    # syllables_spec = [e for e in syllables_spec if e is not None]
-    # if plot:
-    #     draw_spec_set(syllables_spec, zoom=1, maxrows=10, colsize=25)
+            # spec amplitude
+            # plt.clf()
+            # plt.matshow(spec_amp, origin="lower")
+            # plt.savefig(f'{dump_folder}/{ind}_ampspec.pdf')
+            # plt.close()
+            from avgn.signalprocessing.spectrogramming import griffinlim_librosa
+            audio_reconstruct = griffinlim_librosa(spec_amp, hparams.sr, hparams)
+            librosa.output.write_wav(f'{dump_folder}/{ind}_ampspec.wav', audio_reconstruct,
+                                     sr=hparams.sr, norm=True)
 
     ################################################################################
     print('Pad Spectrograms')
@@ -154,16 +154,16 @@ def main(debug):
         syllables_spec_padded.append(spec_padded)
 
         # debug
-        if debug and (ind < 50) and (spec_padded is not None):
+        if debug and (ind in ind_examples) and (spec_padded is not None):
             mel_basis = build_mel_basis(hparams, hparams.sr, hparams.sr)
             mel_inversion_basis = build_mel_inversion_basis(mel_basis)
-            plt.clf()
-            plt.matshow(spec_padded, origin="lower")
-            plt.savefig(f'{dump_folder}/{ind}_spec_padded.pdf')
-            plt.close()
+            # plt.clf()
+            # plt.matshow(spec_padded, origin="lower")
+            # plt.savefig(f'{dump_folder}/{ind}_melspec_padded.pdf')
+            # plt.close()
             audio_reconstruct = inv_spectrogram_librosa(spec_padded, hparams.sr, hparams,
                                                         mel_inversion_basis=mel_inversion_basis)
-            librosa.output.write_wav(f'{dump_folder}/{ind}_reconstruct_padded.wav', audio_reconstruct,
+            librosa.output.write_wav(f'{dump_folder}/{ind}_melspec_padded.wav', audio_reconstruct,
                                      sr=hparams.sr, norm=True)
 
     # Save as uint to save space
@@ -181,7 +181,6 @@ def main(debug):
 
     ################################################################################
     print('Save dataset')
-    suffix = hparams.__repr__()
     save_loc = DATA_DIR / 'syllable_dfs' / DATASET_ID / f'data_{suffix}.pickle'
     ensure_dir(save_loc)
     syllable_df.to_pickle(save_loc)
@@ -191,4 +190,13 @@ def main(debug):
 
 
 if __name__ == '__main__':
-    main()
+    debug = True
+    num_mel_bins_l = [64, 128, 256]
+    n_fft_l = [1024, 2048, 4096]
+    mel_lower_edge_hertz_l = [500]
+    mel_upper_edge_hertz_l = [8000]
+    hop_length_ms_l = [5, 10, None]
+    power_l = [1.5]
+    for num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz, hop_length_ms, power in \
+        itertools.product(num_mel_bins_l, n_fft_l, mel_lower_edge_hertz_l, mel_upper_edge_hertz_l, hop_length_ms_l, power_l):
+        main(debug, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz, hop_length_ms, power)

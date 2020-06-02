@@ -1,7 +1,6 @@
 from datetime import datetime
 
 from pathlib2 import Path
-from tqdm import tqdm
 
 from avgn.custom_parsing.bird_db import generate_json
 from avgn.downloading.birdDB import openBirdDB_df
@@ -16,7 +15,7 @@ def main():
     dataset_path = Path(f'{DATA_DIR}/raw/{DATASET_ID}')
     wavs = set((dataset_path).expanduser().glob('**/*.wav'))
 
-    for wf in tqdm(wavs):
+    for wf in wavs:
         try:
             generate_json(wf, DT_ID, song_db)
         except:

@@ -7,12 +7,13 @@ class HParams(object):
         self.__dict__.update(kwargs)
 
     def __repr__(self):
-        return f'wl{self.win_length_ms}_' \
-               f'hl{self.hop_length_ms}_' \
-               f'nfft{self.n_fft}_' \
-               f'melb{self.num_mel_bins}_' \
-               f'mell{self.mel_lower_edge_hertz}_' \
-               f'melh{self.mel_upper_edge_hertz}'
+        return f'wl-{self.win_length_ms}_' \
+               f'hl-{self.hop_length_ms}_' \
+               f'nfft-{self.n_fft}_' \
+               f'melb-{self.num_mel_bins}_' \
+               f'mell-{self.mel_lower_edge_hertz}_' \
+               f'melh-{self.mel_upper_edge_hertz}_' \
+               f'pow-{self.power}'
 
     def set_defaults(self):
         self.win_length_ms = 5

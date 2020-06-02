@@ -14,14 +14,14 @@ mel_upper_edge_hertz = 12000
 
 config = {
     # --- Dataset ---
-    'dataset': 'Test_segmented',
-    'dataset_kwargs': f'wl{win_length_ms}_'
-                      f'hl{hop_length_ms}_'
-                      f'nfft{n_fft}_'
-                      f'melb{num_mel_bins}_'
-                      f'mell{mel_lower_edge_hertz}_'
-                      f'melh{mel_upper_edge_hertz}',
-                      
+    'dataset': 'Test',
+    'dataset_preprocessing': f'wl{win_length_ms}_'
+                             f'hl{hop_length_ms}_'
+                             f'nfft{n_fft}_'
+                             f'melb{num_mel_bins}_'
+                             f'mell{mel_lower_edge_hertz}_'
+                             f'melh{mel_upper_edge_hertz}',
+
     # --- Model ---
     'model_type': 'VAE',
     'n_z': 32,

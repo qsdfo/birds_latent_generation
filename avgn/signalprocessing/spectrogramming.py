@@ -1,6 +1,5 @@
 import librosa
 import librosa.filters
-import matplotlib.pyplot as plt
 import numpy as np
 from scipy import signal
 
@@ -12,36 +11,29 @@ def spectrogram_librosa(y, hparams, _mel_basis=None, plot=False):
     preemphasis_y = preemphasis(y, hparams)  # low-pass filtering to remove noise
     # amplitude spectrum
     S = librosa.stft(y=preemphasis_y, n_fft=hparams.n_fft, hop_length=hop_length, win_length=win_length)
-    A = np.abs(S)
+    S_abs = np.abs(S)
     # mel-scale ?
     if _mel_basis is not None:
-        A = _linear_to_mel(A**hparams.power, _mel_basis)
+        A = _linear_to_mel(S_abs**hparams.power, _mel_basis)
         # Mel filters are not normalised to sum to 1 for an output bin of the melspectrogram with librosa...
         # Among other, advantage with normalising is that we can still use decibels afterwards
         # A = melspectrogram(preemphasis_y, sr=fs, n_fft=hparams.n_fft, hop_length=hop_length, win_length=win_length,
         #                      power=1.0, n_mels=hparams.num_mels, fmin=hparams.mel_lower_edge_hertz,
         #                      fmax=hparams.mel_upper_edge_hertz,
         #                      )
+    else:
+        A = S_abs
     # decibel
     Sdb = librosa.amplitude_to_db(A) - hparams.ref_level_db
     # normalise to [0,1]
     Sdb_norm = _normalize(Sdb, hparams)
-    if plot:
-        # Preemphasied signal
-        librosa.output.write_wav('spectrogramming_test/preemphasis_y.wav', preemphasis_y, sr=22050, norm=True)
-        # Normalised spectrogram of preemphasised signal
-        fig = plt.figure(dpi=200, figsize=(10, 2))
-        im = plt.imshow(Sdb_norm, origin="lower", aspect="auto")
-        fig.colorbar(im)
-        plt.title('Sdb_norm')
-        plt.show()
-    return Sdb_norm
+    return Sdb_norm, S_abs
 
 
 def griffinlim_librosa(spectrogram, fs, hparams):
     hop_length = None if hparams.hop_length_ms is None else int(hparams.hop_length_ms / 1000 * fs)
     win_length = None if hparams.win_length_ms is None else int(hparams.win_length_ms / 1000 * fs)
-    # We probably don't want to invert the preemphasis in our case
+    # We probably don't want to invert the preemphasis in our case, so directly griffin_lim
     return librosa.griffinlim(
         spectrogram,
         n_iter=hparams.griffin_lim_iters,

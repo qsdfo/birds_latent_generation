@@ -11,12 +11,29 @@ from avgn.utils.paths import DATA_DIR
 @click.command()
 @click.option('-d', '--dataset_name', type=str)
 def main(dataset_name):
+
     ##################################################################################
     print(f'##### Dataset')
-    df_loc = DATA_DIR / 'syllable_dfs' / dataset_name / 'data.pickle'
+
+    # Choose a preprocessing pipeline
+    # win_length_ms = None
+    # hop_length_ms = 10
+    # n_fft = 2048
+    # num_mel_bins = 128
+    # mel_lower_edge_hertz = 500
+    # mel_upper_edge_hertz = 12000
+    # suffix_preprocessing = f'wl{win_length_ms}_' \
+    #                         f'hl{hop_length_ms}_' \
+    #                         f'nfft{n_fft}_' \
+    #                         f'melb{num_mel_bins}_' \
+    #                         f'mell{mel_lower_edge_hertz}_' \
+    #                         f'melh{mel_upper_edge_hertz}'
+    suffix_preprocessing = 'wlNone_hl5_nfft4096_melb256_mell500_melh20000'
+
+    df_loc = DATA_DIR / 'syllable_dfs' / dataset_name / f'data_{suffix_preprocessing}.pickle'
     syllable_df = pd.read_pickle(df_loc)
 
-    hparams_loc = DATA_DIR / 'syllable_dfs' / dataset_name / 'hparams.pickle'
+    hparams_loc = DATA_DIR / 'syllable_dfs' / dataset_name / f'hparams_{suffix_preprocessing}.pickle'
     with open(hparams_loc, 'rb') as ff:
         hparams = pickle.load(ff)
 
