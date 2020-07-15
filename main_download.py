@@ -1,5 +1,5 @@
 import click
-from sklearn.externals.joblib import Parallel, delayed
+from joblib import Parallel, delayed
 from tqdm import tqdm
 
 import avgn

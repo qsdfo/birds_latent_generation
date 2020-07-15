@@ -9,11 +9,13 @@ class Encoder(nn.Module):
     Uses positional embeddings
     """
 
-    def __init__(self, out_stack_dim, n_z, conv_stack):
+    def __init__(self, n_z, conv_stack, conv2z):
         super(Encoder, self).__init__()
         self.n_z = n_z
+        # Conv stack
         self.conv_stack = nn.ModuleList(conv_stack)
-        self.z_mapping = nn.Linear(in_features=out_stack_dim, out_features=n_z * 2)
+        # Small mlp to latent
+        self.conv2z = nn.Sequential(*conv2z)
 
     def forward(self, x):
         # conv stack
@@ -24,5 +26,5 @@ class Encoder(nn.Module):
         # flattening
         y = y.view(y.size(0), -1)
         # map to latent dim
-        z = self.z_mapping(y)
+        z = self.conv2z(y)
         return z

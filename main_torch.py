@@ -14,8 +14,10 @@ from torchvision import datasets, transforms
 from avgn.pytorch.decoder import Decoder
 from avgn.pytorch.encoder import Encoder
 from avgn.pytorch.getters import get_model, get_dataloader
+from avgn.pytorch.spectro_categorical_dataset import SpectroCategoricalDataset
 from avgn.pytorch.spectro_dataset import SpectroDataset
 from avgn.signalprocessing.spectrogramming import build_mel_basis, build_mel_inversion_basis, inv_spectrogram_librosa
+from avgn.utils.cuda_variable import cuda_variable
 from avgn.utils.paths import DATA_DIR, MODEL_DIR
 
 
@@ -70,16 +72,19 @@ def main(plot,
                                      ]))
         hparams = None
     else:
-        df_loc = DATA_DIR / 'syllable_dfs' / dataset_name / 'data.pickle'
+        # data
+        df_loc = DATA_DIR / 'syllable_dfs' / dataset_name / f'data_{config["dataset_preprocessing"]}.pickle'
         syllable_df = pd.read_pickle(df_loc)
         num_examples = len(syllable_df)
         split = 0.9
         syllable_df_train = syllable_df.iloc[: int(split * num_examples)].reset_index()
         syllable_df_val = syllable_df.iloc[int(split * num_examples):].reset_index()
-        dataset_train = SpectroDataset(syllable_df_train)
-        dataset_val = SpectroDataset(syllable_df_val)
-
-        hparams_loc = DATA_DIR / 'syllable_dfs' / dataset_name / 'hparams.pickle'
+        # dataset_train = SpectroDataset(syllable_df_train)
+        # dataset_val = SpectroDataset(syllable_df_val)
+        dataset_train = SpectroCategoricalDataset(syllable_df_train)
+        dataset_val = SpectroCategoricalDataset(syllable_df_val)
+        # hparam
+        hparams_loc = DATA_DIR / 'syllable_dfs' / dataset_name / f'hparams_{config["dataset_preprocessing"]}.pickle'
         with open(hparams_loc, 'rb') as ff:
             hparams = pickle.load(ff)
 
@@ -91,30 +96,37 @@ def main(plot,
 
     # Get image dimensions
     for example_data in val_dataloader:
-        dims = example_data.shape[2:]
+        dims = example_data['input'].shape[2:]
         if plot:
             fig, ax = plt.subplots(nrows=3)
             for i in range(3):
                 # show the image
-                ax[i].matshow(example_data[i].reshape(dims), origin="lower")
+                ax[i].matshow(example_data['input'][i].reshape(dims), origin="lower")
             plt.show()
             break
 
     ##################################################################################
     print(f'##### Model')
     encoder_kwargs = config['encoder_kwargs']
-    encoder = Encoder(out_stack_dim=encoder_kwargs['out_stack_dim'],
-                      n_z=config['n_z'],
-                      conv_stack=encoder_kwargs['conv_stack'],)
+    encoder = Encoder(
+        n_z=config['n_z'],
+        conv_stack=encoder_kwargs['conv_stack'],
+        conv2z=encoder_kwargs['conv2z']
+    )
     decoder_kwargs = config['decoder_kwargs']
-    decoder = Decoder(deconv_input_shape=decoder_kwargs['deconv_input_shape'],
-                      deconv_stack=decoder_kwargs['deconv_stack'],
-                      n_z=config['n_z'])
-    model = get_model(model_type=config['model_type'],
-                      model_kwargs=config['model_kwargs'],
-                      encoder=encoder,
-                      decoder=decoder,
-                      model_dir=model_path)
+    decoder = Decoder(
+        deconv_input_shape=decoder_kwargs['deconv_input_shape'],
+        z2deconv=decoder_kwargs['z2deconv'],
+        deconv_stack=decoder_kwargs['deconv_stack'],
+        n_z=config['n_z']
+    )
+    model = get_model(
+        model_type=config['model_type'],
+        model_kwargs=config['model_kwargs'],
+        encoder=encoder,
+        decoder=decoder,
+        model_dir=model_path
+    )
     optimizer = torch.optim.Adam(list(model.parameters()), lr=config['lr'])
 
     if load is not None:
@@ -127,7 +139,7 @@ def main(plot,
     ##################################################################################
     print(f'##### Training')
     best_val_loss = float('inf')
-    num_examples_plot = 5
+    num_examples_plot = 10
     if train:
         # Copy config file in the save directory before training
         if not load:
@@ -144,9 +156,9 @@ def main(plot,
                                             batch_size=config['batch_size'], shuffle=True)
 
             train_loss = epoch(model, optimizer, train_dataloader,
-                               num_batches=config['num_batches'], training=True, device=device)
+                               num_batches=config['num_batches'], training=True)
             val_loss = epoch(model, optimizer, val_dataloader,
-                             num_batches=config['num_batches'], training=False, device=device)
+                             num_batches=config['num_batches'], training=False)
 
             print(f'Epoch {ind_epoch}:')
             print(f'Train loss {train_loss}:')
@@ -154,7 +166,8 @@ def main(plot,
 
             del train_dataloader, val_dataloader
 
-            if (val_loss < best_val_loss) or (ind_epoch % 10 == 0):
+            # if (val_loss < best_val_loss) and (ind_epoch % 200 == 0):
+            if ind_epoch % 200 == 0:
                 # Save model
                 model.save(name=ind_epoch)
 
@@ -162,19 +175,19 @@ def main(plot,
                 if not os.path.isdir(f'{model.model_dir}/plots/{ind_epoch}'):
                     os.mkdir(f'{model.model_dir}/plots/{ind_epoch}')
                 test_dataloader = get_dataloader(dataset_type=config['dataset'], dataset=dataset_val,
-                                                 batch_size=num_examples_plot, shuffle=False)
+                                                 batch_size=num_examples_plot, shuffle=True)
                 savepath = f'{model.model_dir}/plots/{ind_epoch}/reconstruction'
-                plot_reconstruction(model, hparams, test_dataloader, device, savepath)
+                plot_reconstruction(model, hparams, test_dataloader, savepath)
                 savepath = f'{model.model_dir}/plots/{ind_epoch}/generation'
                 plot_generation(model, hparams, num_examples_plot, savepath)
                 del test_dataloader
 
 
-def plot_reconstruction(model, hparams, dataloader, device, savepath):
+def plot_reconstruction(model, hparams, dataloader, savepath):
     # Forward pass
     model.eval()
     for _, data in enumerate(dataloader):
-        data_cuda = data.to(device)
+        data_cuda = cuda_variable(data)
         x_recon = model.reconstruct(data_cuda).cpu().detach().numpy()
         break
     # Plot
@@ -233,7 +246,7 @@ def plot_generation(model, hparams, num_examples, savepath):
             librosa.output.write_wav(f'{savepath}_{i}.wav', gen_audio, sr=hparams.sr, norm=True)
 
 
-def epoch(model, optimizer, dataloader, num_batches, training, device):
+def epoch(model, optimizer, dataloader, num_batches, training):
     if training:
         model.train()
     else:
@@ -242,9 +255,8 @@ def epoch(model, optimizer, dataloader, num_batches, training, device):
     for batch_idx, data in enumerate(dataloader):
         if num_batches is not None and batch_idx > num_batches:
             break
-        data_cuda = data.to(device)
         optimizer.zero_grad()
-        loss = model.step(data_cuda)
+        loss = model.step(data)
         if training:
             loss.backward()
             optimizer.step()

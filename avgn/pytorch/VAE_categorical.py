@@ -1,20 +1,18 @@
 import os
-
 import torch
 from torch import nn
 from torch.nn import functional as F
-
 from avgn.utils.cuda_variable import cuda_variable
 
 
-class VAE(nn.Module):
+class VAE_categorical(nn.Module):
     """a basic vae class for tensorflow
     Extends:
         tf.keras.Model
     """
 
     def __init__(self, encoder, decoder, model_dir, beta=1.0):
-        super(VAE, self).__init__()
+        super(VAE_categorical, self).__init__()
         self.beta = beta
         self.enc = encoder
         self.dec = decoder
@@ -48,12 +46,14 @@ class VAE(nn.Module):
         z = self.reparameterize(mu, logvar)
         return self.decode(z), mu, logvar
 
-    def step(self, x):
+    def step(self, data):
+        x = cuda_variable(data['input'])
+        target = cuda_variable(data['target']).long()
         recon_batch, mu, logvar = self(x)
         batch_dim = x.shape[0]
         recon_batch_flat = recon_batch.view(batch_dim, -1)
-        x_flat = x.view(batch_dim, -1)
-        loss = self.loss_function(recon_batch_flat, x_flat, mu, logvar, self.beta)
+        target_flat = target.view(batch_dim, -1)
+        loss = self.loss_function(recon_batch_flat, target_flat, mu, logvar, self.beta)
         return loss
 
     def reconstruct(self, x):
@@ -68,7 +68,7 @@ class VAE(nn.Module):
     # Reconstruction + KL divergence losses summed over all elements and batch
     @staticmethod
     def loss_function(recon_x, x, mu, logvar, beta):
-        BCE = F.binary_cross_entropy(recon_x, x, reduction='sum')
+        cross_entropy_loss = nn.CrossEntropyLoss()
+        cross_entropy = cross_entropy_loss(recon_x, x)
         KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
-        return BCE + beta * KLD
-
+        return cross_entropy + beta * KLD

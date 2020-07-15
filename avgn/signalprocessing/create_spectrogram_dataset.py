@@ -53,15 +53,15 @@ def mask_spec(spec, spec_thresh=0.9, offset=1e-10):
 
 
 def create_syllable_df(
-    dataset,
-    indv,
-    unit="syllables",
-    log_scaling_factor=10,
-    verbosity=0,
-    log_scale_time=True,
-    pad_syllables=True,
-    n_jobs=-1,
-    include_labels=False,
+        dataset,
+        indv,
+        unit="syllables",
+        log_scaling_factor=10,
+        verbosity=0,
+        log_scale_time=True,
+        pad_syllables=True,
+        n_jobs=-1,
+        include_labels=False,
 ):
     """ from a DataSet object, get all of the syllables from an individual as a spectrogram
     """
@@ -195,32 +195,70 @@ def prepare_wav(wav_loc, hparams, dump_folder, debug):
     if np.issubdtype(type(data[0]), np.integer):
         data = int16_to_float32(data)
 
-    # bandpass filter
-    if hparams is not None:
-        data = butter_bandpass_filter(
-            data, hparams.butter_lowcut, hparams.butter_highcut, hparams.sr, order=5
-        )
-        if debug:
-            librosa.output.write_wav(f'{dump_folder}/butter_bandpass_filter.wav', data, sr=hparams.sr, norm=True)
+    #######################################
+    #######################################
+    #######################################"
+    # # bandpass filter
+    # if hparams is not None:
+    #     data_TTT = butter_bandpass_filter(
+    #         data, hparams.butter_lowcut, hparams.butter_highcut, hparams.sr, order=5
+    #     )
+    #     if debug:
+    #         librosa.output.write_wav(f'{dump_folder}/butter_bandpass_filter.wav', data, sr=hparams.sr, norm=True)
+    #
+    #     # reduce noise
+    #     if hparams.reduce_noise:
+    #         data_TTT = nr.reduce_noise(
+    #             audio_clip=data_TTT, noise_clip=data_TTT, **hparams.noise_reduce_kwargs
+    #         )
+    #######################################
+    #######################################
+    #######################################
 
-        # reduce noise
-        if hparams.reduce_noise:
-            data = nr.reduce_noise(
-                audio_clip=data, noise_clip=data, **hparams.noise_reduce_kwargs
+    # Chunks to avoid memory issues
+    len_chunk_minutes = 30
+    len_chunk_sample = hparams.sr * 60 * len_chunk_minutes
+    data_chunks = []
+    for t in range(0, len(data), len_chunk_sample):
+        start = t
+        end = min(len(data), t + len_chunk_sample)
+        data_chunks.append(data[start:end])
+
+    # bandpass filter
+    data_cleaned = []
+    if hparams is not None:
+        for data in data_chunks:
+            data = butter_bandpass_filter(
+                data, hparams.butter_lowcut, hparams.butter_highcut, hparams.sr, order=5
             )
-        if debug:
-            librosa.output.write_wav(f'{dump_folder}/reduce_noise.wav', data, sr=hparams.sr, norm=True)
+            if debug:
+                librosa.output.write_wav(f'{dump_folder}/butter_bandpass_filter.wav', data, sr=hparams.sr, norm=True)
+
+            # reduce noise
+            if hparams.reduce_noise:
+                data = nr.reduce_noise(
+                    audio_clip=data, noise_clip=data, **hparams.noise_reduce_kwargs
+                )
+            data_cleaned.append(data)
+    else:
+        data_cleaned = data_chunks
+
+    #  concatenate chunks
+    data = np.concatenate(data_cleaned)
+
+    if debug:
+        librosa.output.write_wav(f'{dump_folder}/reduce_noise.wav', data, sr=hparams.sr, norm=True)
 
     return data
 
 
 def create_label_df(
-    json_dict,
-    hparams=None,
-    labels_to_retain=[],
-    unit="syllables",
-    dict_features_to_retain=[],
-    key=None,
+        json_dict,
+        hparams=None,
+        labels_to_retain=[],
+        unit="syllables",
+        dict_features_to_retain=[],
+        key=None,
 ):
     """ create a dataframe from json dictionary of time events and labels
     """
@@ -265,7 +303,7 @@ def get_row_audio(syllable_df, wav_loc, hparams):
     # load audio
     rate, data = prepare_wav(wav_loc, hparams)
     data = data.astype('float32')
-    
+
     # get audio for each syllable
     syllable_df["audio"] = [
         data[int(st * rate):int(et * rate)]

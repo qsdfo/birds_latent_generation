@@ -27,7 +27,19 @@ def spectrogram_librosa(y, hparams, _mel_basis=None, plot=False):
     Sdb = librosa.amplitude_to_db(A) - hparams.ref_level_db
     # normalise to [0,1]
     Sdb_norm = _normalize(Sdb, hparams)
-    return Sdb_norm, S_abs
+    if plot:
+        debug_info = {
+            'preemphasis_y': preemphasis_y,
+            'S': S,
+            'S_abs': S_abs,
+            'mel': A,
+            'mel_db': Sdb,
+            'mel_db_norm': Sdb_norm
+        }
+    else:
+        debug_info = None
+
+    return Sdb_norm, debug_info
 
 
 def griffinlim_librosa(spectrogram, fs, hparams):
@@ -39,6 +51,8 @@ def griffinlim_librosa(spectrogram, fs, hparams):
         n_iter=hparams.griffin_lim_iters,
         hop_length=hop_length,
         win_length=win_length,
+        momentum=0.5,
+        # momentum=0.99
     )
     # return inv_preemphasis(
     #     librosa.griffinlim(
@@ -51,17 +65,26 @@ def griffinlim_librosa(spectrogram, fs, hparams):
     # )
 
 
+# OLD VERSION, operation order false?
+# def inv_spectrogram_librosa(spectrogram, fs, hparams, mel_inversion_basis=None):
+#     """Converts spectrogram to waveform using librosa"""
+#     if mel_inversion_basis is not None:
+#         spectrogram = _mel_to_linear(spectrogram, _mel_inverse_basis=mel_inversion_basis)
+#     S_denorm = _denormalize(spectrogram, hparams)
+#     S = librosa.db_to_amplitude(
+#         S_denorm + hparams.ref_level_db
+#     )  # Convert back to linear
+#     # Reconstruct phase
+#     return griffinlim_librosa(S, fs, hparams)
 def inv_spectrogram_librosa(spectrogram, fs, hparams, mel_inversion_basis=None):
     """Converts spectrogram to waveform using librosa"""
+    s_unnorm = _denormalize(spectrogram, hparams)
+    s_amplitude = librosa.db_to_amplitude(s_unnorm + hparams.ref_level_db)
     if mel_inversion_basis is not None:
-        spectrogram = _mel_to_linear(spectrogram, _mel_inverse_basis=mel_inversion_basis)
-    S_denorm = _denormalize(spectrogram, hparams)
-    S = librosa.db_to_amplitude(
-        S_denorm + hparams.ref_level_db
-    )  # Convert back to linear
-    # Reconstruct phase
-    return griffinlim_librosa(S, fs, hparams)
-
+        s_linear = _mel_to_linear(s_amplitude, _mel_inverse_basis=mel_inversion_basis)
+    else:
+        s_linear = s_amplitude
+    return griffinlim_librosa(s_linear, hparams.sr, hparams)
 
 def preemphasis(x, hparams):
     return signal.lfilter([1, -hparams.preemphasis], [1], x)

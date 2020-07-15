@@ -17,7 +17,7 @@ def main():
 
     for wf in wavs:
         try:
-            generate_json(wf, DT_ID, song_db)
+            type(wf, DT_ID, song_db)
         except:
             continue
 

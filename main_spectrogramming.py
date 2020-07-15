@@ -1,6 +1,7 @@
 import itertools
 import os
 import pickle
+import shutil
 
 import librosa
 import matplotlib.pyplot as plt
@@ -18,9 +19,11 @@ from avgn.utils.hparams import HParams
 from avgn.utils.paths import DATA_DIR, ensure_dir
 
 
-def main(debug, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz, hop_length_ms, power):
+def main(debug, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz,
+         hop_length_ms, win_length_ms, power):
     # DATASET_ID = 'BIRD_DB_CATH'
-    DATASET_ID = 'Test'
+    DATASET_ID = 'Bird_all'
+    # DATASET_ID = 'Test'
     ind_examples = [20, 40, 50, 60, 80, 100]
 
     ################################################################################
@@ -34,24 +37,25 @@ def main(debug, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz,
         power=power,  # for spectral inversion
         butter_lowcut=mel_lower_edge_hertz,
         butter_highcut=mel_upper_edge_hertz,
-        ref_level_db=20,
-        min_level_db=-60,
+        ref_level_db=40,
+        min_level_db=-90,
         mask_spec=False,
-        win_length_ms=None,
+        win_length_ms=win_length_ms,
         hop_length_ms=hop_length_ms,
         mask_spec_kwargs={"spec_thresh": 0.9, "offset": 1e-10},
         n_jobs=1,
         verbosity=1,
         reduce_noise=True,
-        noise_reduce_kwargs={"n_std_thresh": 2.0, "prop_decrease": 0.8}
+        noise_reduce_kwargs={"n_std_thresh": 2.0, "prop_decrease": 0.8},
+        griffin_lim_iters=50
     )
     suffix = hparams.__repr__()
 
     if debug:
         dump_folder = DATA_DIR / 'dump' / f'{suffix}'
         if os.path.isdir(dump_folder):
-            os.rmdir(dump_folder)
-        os.mkdir(dump_folder)
+            shutil.rmtree(dump_folder)
+        os.makedirs(dump_folder)
     else:
         dump_folder = None
 
@@ -82,25 +86,26 @@ def main(debug, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz,
         # load audio (key.unique is for loading large wavfiles only once)
         this_syllable_df = syllable_df[syllable_df.key == key]
         wav_loc = dataset.data_files[key].data['wav_loc']
+        print(f'{wav_loc}')
         data = prepare_wav(wav_loc, hparams, dump_folder, debug)
         data = data.astype('float32')
         # get audio for each syllable
-        this_syllable_df["audio"] = [
-            data[int(st * hparams.sr): int(et * hparams.sr)]
-            for st, et in zip(syllable_df.start_time.values, syllable_df.end_time.values)
-        ]
+        ll = []
+        for st, et in zip(this_syllable_df.start_time.values, this_syllable_df.end_time.values):
+            try:
+                ll.append(data[int(st * hparams.sr): int(et * hparams.sr)])
+            except:
+                print('yoyo')
+        this_syllable_df["audio"] = ll
         syllable_dfs.append(this_syllable_df)
+        del data
+        del this_syllable_df
     syllable_df = pd.concat(syllable_dfs)
     df_mask = np.array([len(i) > 0 for i in tqdm(syllable_df.audio.values)])
     syllable_df = syllable_df[np.array(df_mask)]
     print(f'Number of syllable: {len(syllable_df)}')
 
-    if debug:
-        for ind in ind_examples:
-            librosa.output.write_wav(f'{dump_folder}/{ind}_syllable.wav', syllable_df.audio[ind],
-                                     sr=hparams.sr, norm=True)
-
-    # Normalise ???
+    # Normalise
     ret = []
     for i in syllable_df.audio.values:
         ret.append(i / np.max(i))
@@ -117,34 +122,70 @@ def main(debug, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz,
         # create spec
         mel_basis = build_mel_basis(hparams, hparams.sr, hparams.sr)
         mel_inversion_basis = build_mel_inversion_basis(mel_basis)
-        melspec, spec_amp = spectrogram_librosa(syll_wav, hparams, _mel_basis=mel_basis)
+        melspec, debug_info = spectrogram_librosa(syll_wav, hparams, _mel_basis=mel_basis, plot=debug)
         syllables_spec.append(melspec)
 
         if debug and (ind in ind_examples):
-            # melspec
-            # plt.clf()
-            # plt.matshow(melspec, origin="lower")
-            # plt.savefig(f'{dump_folder}/{ind}_melspec.pdf')
-            # plt.close()
-            audio_reconstruct = inv_spectrogram_librosa(melspec, hparams.sr, hparams,
-                                                        mel_inversion_basis=mel_inversion_basis)
-            librosa.output.write_wav(f'{dump_folder}/{ind}_melspec.wav', audio_reconstruct,
+            from avgn.signalprocessing.spectrogramming import griffinlim_librosa, _mel_to_linear
+            librosa.output.write_wav(f'{dump_folder}/{ind}_syllable.wav', syll_wav,
                                      sr=hparams.sr, norm=True)
-            # spec amplitude
+
+            # #  preemphasis y
+            # librosa.output.write_wav(f'{dump_folder}/{ind}_preemphasis_y.wav', debug_info['preemphasis_y'],
+            #                          sr=hparams.sr, norm=True)
+            # # S
+            # # plt.clf()
+            # # plt.matshow(debug_info['S'], origin="lower")
+            # # plt.savefig(f'{dump_folder}/{ind}_S.pdf')
+            # # plt.close()
+            # S_inv = griffinlim_librosa(debug_info['S'], hparams.sr, hparams)
+            # librosa.output.write_wav(f'{dump_folder}/{ind}_S.wav', S_inv, sr=hparams.sr, norm=True)
+            #
+            # # S_abs
             # plt.clf()
-            # plt.matshow(spec_amp, origin="lower")
-            # plt.savefig(f'{dump_folder}/{ind}_ampspec.pdf')
+            # plt.matshow(debug_info['S_abs'], origin="lower")
+            # plt.savefig(f'{dump_folder}/{ind}_S_abs.pdf')
             # plt.close()
-            from avgn.signalprocessing.spectrogramming import griffinlim_librosa
-            audio_reconstruct = griffinlim_librosa(spec_amp, hparams.sr, hparams)
-            librosa.output.write_wav(f'{dump_folder}/{ind}_ampspec.wav', audio_reconstruct,
-                                     sr=hparams.sr, norm=True)
+            # S_abs_inv = griffinlim_librosa(debug_info['S'], hparams.sr, hparams)
+            # librosa.output.write_wav(f'{dump_folder}/{ind}_S_abs.wav', S_abs_inv, sr=hparams.sr, norm=True)
+            #
+            # # mel
+            # plt.clf()
+            # plt.matshow(debug_info['mel'], origin="lower")
+            # plt.savefig(f'{dump_folder}/{ind}_mel.pdf')
+            # plt.close()
+            # mel_inv = griffinlim_librosa(
+            #     _mel_to_linear(debug_info['mel'], _mel_inverse_basis=mel_inversion_basis)
+            #     , hparams.sr, hparams)
+            # librosa.output.write_wav(f'{dump_folder}/{ind}_mel.wav', mel_inv, sr=hparams.sr, norm=True)
+            #
+            # # mel_db
+            # plt.clf()
+            # plt.matshow(debug_info['mel_db'], origin="lower")
+            # plt.savefig(f'{dump_folder}/{ind}_mel_db.pdf')
+            # plt.close()
+            # mel_db_inv = griffinlim_librosa(
+            #     librosa.db_to_amplitude(
+            #         _mel_to_linear(debug_info['mel_db'], _mel_inverse_basis=mel_inversion_basis) + hparams.ref_level_db
+            #     ), hparams.sr, hparams)
+            # librosa.output.write_wav(f'{dump_folder}/{ind}_mel_db.wav', mel_db_inv, sr=hparams.sr, norm=True)
+
+            # mel_db_norm
+            plt.clf()
+            plt.matshow(debug_info['mel_db_norm'], origin="lower")
+            plt.savefig(f'{dump_folder}/{ind}_mel_db_norm.pdf')
+            plt.close()
+            mel_db_norm_inv = inv_spectrogram_librosa(debug_info['mel_db_norm'], hparams.sr, hparams,
+                                                      mel_inversion_basis=mel_inversion_basis)
+            librosa.output.write_wav(f'{dump_folder}/{ind}_mel_db_norm.wav', mel_db_norm_inv, sr=hparams.sr, norm=True)
 
     ################################################################################
     print('Pad Spectrograms')
-    # Take 1 secondes max, but a bit more to have square spectrograms, so 128
-    # pad_length = int(1 * (1000 / hparams.hop_length_ms))
-    pad_length = 128
+    # We want spectro representing num_seconds of signal
+    # pad_length = int(num_seconds * (1000 / hparams.hop_length_ms))
+    # with, if hparams.hop_length_ms = None, hop_size = hparams.sr / hparams.n_fft
+    # Take 1 secondes max, but a bit more to have square spectrograms -> 64
+    pad_length = 64
     syllables_spec_padded = []
     for ind, spec in enumerate(syllables_spec):
         if spec.shape[1] > pad_length:
@@ -155,12 +196,10 @@ def main(debug, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz,
 
         # debug
         if debug and (ind in ind_examples) and (spec_padded is not None):
-            mel_basis = build_mel_basis(hparams, hparams.sr, hparams.sr)
-            mel_inversion_basis = build_mel_inversion_basis(mel_basis)
-            # plt.clf()
-            # plt.matshow(spec_padded, origin="lower")
-            # plt.savefig(f'{dump_folder}/{ind}_melspec_padded.pdf')
-            # plt.close()
+            plt.clf()
+            plt.matshow(spec_padded, origin="lower")
+            plt.savefig(f'{dump_folder}/{ind}_melspec_padded.pdf')
+            plt.close()
             audio_reconstruct = inv_spectrogram_librosa(spec_padded, hparams.sr, hparams,
                                                         mel_inversion_basis=mel_inversion_basis)
             librosa.output.write_wav(f'{dump_folder}/{ind}_melspec_padded.wav', audio_reconstruct,
@@ -190,13 +229,29 @@ def main(debug, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz,
 
 
 if __name__ == '__main__':
+    # Grid search
     debug = True
-    num_mel_bins_l = [64, 128, 256]
-    n_fft_l = [1024, 2048, 4096]
+    num_mel_bins_l = [64]
+    n_fft_l = [1024]
     mel_lower_edge_hertz_l = [500]
     mel_upper_edge_hertz_l = [8000]
-    hop_length_ms_l = [5, 10, None]
+    hop_length_ms_l = [None]
+    win_length_ms_l = [None]
     power_l = [1.5]
-    for num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz, hop_length_ms, power in \
-        itertools.product(num_mel_bins_l, n_fft_l, mel_lower_edge_hertz_l, mel_upper_edge_hertz_l, hop_length_ms_l, power_l):
-        main(debug, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz, hop_length_ms, power)
+    for num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz, hop_length_ms, win_length_ms, power in \
+        itertools.product(num_mel_bins_l, n_fft_l, mel_lower_edge_hertz_l, mel_upper_edge_hertz_l,
+                          hop_length_ms_l, win_length_ms_l, power_l):
+        main(debug, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz,
+             hop_length_ms, win_length_ms, power)
+
+    # debug = True
+    # num_mel_bins_l = [256]
+    # n_fft_l = [1024]
+    # mel_lower_edge_hertz_l = [500]
+    # mel_upper_edge_hertz_l = [8000]
+    # hop_length_ms_l = [5]
+    # power_l = [1.5]
+    # for num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz, hop_length_ms, power in \
+    #         itertools.product(num_mel_bins_l, n_fft_l, mel_lower_edge_hertz_l, mel_upper_edge_hertz_l, hop_length_ms_l,
+    #                           power_l):
+    #     main(debug, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz, hop_length_ms, power)

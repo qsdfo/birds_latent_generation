@@ -7,8 +7,8 @@ deconv_input_shape = (64, 8, 8)
 
 win_length_ms = None
 hop_length_ms = 10
-n_fft = 2048
-num_mel_bins = 128
+n_fft = 1024
+num_mel_bins = 64
 mel_lower_edge_hertz = 500
 mel_upper_edge_hertz = 12000
 
