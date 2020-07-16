@@ -1,6 +1,6 @@
 import itertools
 import os
-import pickle
+import pickle as pkl
 import shutil
 
 import librosa
@@ -81,7 +81,14 @@ def main(debug, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz,
 
     ################################################################################
     print('Get audio for dataset')
-    syllable_dfs = []
+    mel_basis = build_mel_basis(hparams, hparams.sr, hparams.sr)
+    mel_inversion_basis = build_mel_inversion_basis(mel_basis)
+    counter = 0
+    index = {}
+    save_loc = DATA_DIR / 'syllables' / f'{DATASET_ID}_{suffix}'
+    if os.path.isdir(save_loc):
+        raise Exception('already exists')
+    os.mkdir(save_loc)
     for key in syllable_df.key.unique():
         # load audio (key.unique is for loading large wavfiles only once)
         this_syllable_df = syllable_df[syllable_df.key == key]
@@ -89,143 +96,61 @@ def main(debug, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz,
         print(f'{wav_loc}')
         data = prepare_wav(wav_loc, hparams, dump_folder, debug)
         data = data.astype('float32')
-        # get audio for each syllable
-        ll = []
-        for st, et in zip(this_syllable_df.start_time.values, this_syllable_df.end_time.values):
-            try:
-                ll.append(data[int(st * hparams.sr): int(et * hparams.sr)])
-            except:
-                print('yoyo')
-        this_syllable_df["audio"] = ll
-        syllable_dfs.append(this_syllable_df)
-        del data
-        del this_syllable_df
-    syllable_df = pd.concat(syllable_dfs)
-    df_mask = np.array([len(i) > 0 for i in tqdm(syllable_df.audio.values)])
-    syllable_df = syllable_df[np.array(df_mask)]
-    print(f'Number of syllable: {len(syllable_df)}')
+        # process each syllable
+        for syll_ind, (st, et) in enumerate(zip(this_syllable_df.start_time.values, this_syllable_df.end_time.values)):
+            s = data[int(st * hparams.sr): int(et * hparams.sr)]
+            # Skip silences
+            if len(s) == 0:
+                continue
+            if np.max(s) == 0:
+                continue
+            # Normalise
+            sn = s / np.max(s)
+            # convert to float
+            if type(sn[0]) == int:
+                sn = int16_to_float32(sn)
+            # create spec
+            mS, debug_info = spectrogram_librosa(sn, hparams, _mel_basis=mel_basis, plot=debug)
 
-    # Normalise
-    ret = []
-    for i in syllable_df.audio.values:
-        ret.append(i / np.max(i))
-    syllable_df['audio'] = ret
+            # We want spectro representing num_seconds of signal
+            # pad_length = int(num_seconds * (1000 / hparams.hop_length_ms))
+            # with, if hparams.hop_length_ms = None, hop_size = hparams.sr / hparams.n_fft
+            # Take 1 secondes max, but a bit more to have square spectrograms -> 64
+            pad_length = 64
+            if mS.shape[1] > pad_length:
+                # Just skip that syllable if its too long
+                continue
+            else:
+                mSp = pad_spectrogram(mS, pad_length)
 
-    ################################################################################
-    print('Create Spectrograms')
-    syllables_wav = syllable_df.audio.values
-    syllables_spec = []
-    for ind, syll_wav in enumerate(syllables_wav):
-        # convert to float
-        if type(syll_wav[0]) == int:
-            syll_wav = int16_to_float32(syll_wav)
-        # create spec
-        mel_basis = build_mel_basis(hparams, hparams.sr, hparams.sr)
-        mel_inversion_basis = build_mel_inversion_basis(mel_basis)
-        melspec, debug_info = spectrogram_librosa(syll_wav, hparams, _mel_basis=mel_basis, plot=debug)
-        syllables_spec.append(melspec)
+            # Save as uint to save space
+            val = (mSp * 255).astype('uint8')
+            save_dict = {
+                'mSp': val,
+                'sn': sn,
+                'label': this_syllable_df.indv[syll_ind]
+            }
+            fname = save_loc / str(counter)
+            with open(fname, 'wb') as ff:
+                pkl.dump(save_dict, ff)
+            counter += 1
 
-        if debug and (ind in ind_examples):
-            from avgn.signalprocessing.spectrogramming import griffinlim_librosa, _mel_to_linear
-            librosa.output.write_wav(f'{dump_folder}/{ind}_syllable.wav', syll_wav,
-                                     sr=hparams.sr, norm=True)
+            if debug and (counter in ind_examples):
+                # normalised audio
+                librosa.output.write_wav(f'{dump_folder}/{counter}_sn.wav', sn, sr=hparams.sr, norm=True)
+                # Padded mel db norm spectro
+                plt.clf()
+                plt.matshow(mSp, origin="lower")
+                plt.savefig(f'{dump_folder}/{counter}_mSp.pdf')
+                plt.close()
+                audio_reconstruct = inv_spectrogram_librosa(mSp, hparams.sr, hparams,
+                                                            mel_inversion_basis=mel_inversion_basis)
+                librosa.output.write_wav(f'{dump_folder}/{counter}_mSp.wav', audio_reconstruct, sr=hparams.sr, norm=True)
 
-            # #  preemphasis y
-            # librosa.output.write_wav(f'{dump_folder}/{ind}_preemphasis_y.wav', debug_info['preemphasis_y'],
-            #                          sr=hparams.sr, norm=True)
-            # # S
-            # # plt.clf()
-            # # plt.matshow(debug_info['S'], origin="lower")
-            # # plt.savefig(f'{dump_folder}/{ind}_S.pdf')
-            # # plt.close()
-            # S_inv = griffinlim_librosa(debug_info['S'], hparams.sr, hparams)
-            # librosa.output.write_wav(f'{dump_folder}/{ind}_S.wav', S_inv, sr=hparams.sr, norm=True)
-            #
-            # # S_abs
-            # plt.clf()
-            # plt.matshow(debug_info['S_abs'], origin="lower")
-            # plt.savefig(f'{dump_folder}/{ind}_S_abs.pdf')
-            # plt.close()
-            # S_abs_inv = griffinlim_librosa(debug_info['S'], hparams.sr, hparams)
-            # librosa.output.write_wav(f'{dump_folder}/{ind}_S_abs.wav', S_abs_inv, sr=hparams.sr, norm=True)
-            #
-            # # mel
-            # plt.clf()
-            # plt.matshow(debug_info['mel'], origin="lower")
-            # plt.savefig(f'{dump_folder}/{ind}_mel.pdf')
-            # plt.close()
-            # mel_inv = griffinlim_librosa(
-            #     _mel_to_linear(debug_info['mel'], _mel_inverse_basis=mel_inversion_basis)
-            #     , hparams.sr, hparams)
-            # librosa.output.write_wav(f'{dump_folder}/{ind}_mel.wav', mel_inv, sr=hparams.sr, norm=True)
-            #
-            # # mel_db
-            # plt.clf()
-            # plt.matshow(debug_info['mel_db'], origin="lower")
-            # plt.savefig(f'{dump_folder}/{ind}_mel_db.pdf')
-            # plt.close()
-            # mel_db_inv = griffinlim_librosa(
-            #     librosa.db_to_amplitude(
-            #         _mel_to_linear(debug_info['mel_db'], _mel_inverse_basis=mel_inversion_basis) + hparams.ref_level_db
-            #     ), hparams.sr, hparams)
-            # librosa.output.write_wav(f'{dump_folder}/{ind}_mel_db.wav', mel_db_inv, sr=hparams.sr, norm=True)
-
-            # mel_db_norm
-            plt.clf()
-            plt.matshow(debug_info['mel_db_norm'], origin="lower")
-            plt.savefig(f'{dump_folder}/{ind}_mel_db_norm.pdf')
-            plt.close()
-            mel_db_norm_inv = inv_spectrogram_librosa(debug_info['mel_db_norm'], hparams.sr, hparams,
-                                                      mel_inversion_basis=mel_inversion_basis)
-            librosa.output.write_wav(f'{dump_folder}/{ind}_mel_db_norm.wav', mel_db_norm_inv, sr=hparams.sr, norm=True)
-
-    ################################################################################
-    print('Pad Spectrograms')
-    # We want spectro representing num_seconds of signal
-    # pad_length = int(num_seconds * (1000 / hparams.hop_length_ms))
-    # with, if hparams.hop_length_ms = None, hop_size = hparams.sr / hparams.n_fft
-    # Take 1 secondes max, but a bit more to have square spectrograms -> 64
-    pad_length = 64
-    syllables_spec_padded = []
-    for ind, spec in enumerate(syllables_spec):
-        if spec.shape[1] > pad_length:
-            spec_padded = None
-        else:
-            spec_padded = pad_spectrogram(spec, pad_length)
-        syllables_spec_padded.append(spec_padded)
-
-        # debug
-        if debug and (ind in ind_examples) and (spec_padded is not None):
-            plt.clf()
-            plt.matshow(spec_padded, origin="lower")
-            plt.savefig(f'{dump_folder}/{ind}_melspec_padded.pdf')
-            plt.close()
-            audio_reconstruct = inv_spectrogram_librosa(spec_padded, hparams.sr, hparams,
-                                                        mel_inversion_basis=mel_inversion_basis)
-            librosa.output.write_wav(f'{dump_folder}/{ind}_melspec_padded.wav', audio_reconstruct,
-                                     sr=hparams.sr, norm=True)
-
-    # Save as uint to save space
-    syllables_spec_uint = []
-    for e in syllables_spec_padded:
-        if e is None:
-            val = None
-        else:
-            val = (e * 255).astype('uint8')
-        syllables_spec_uint.append(val)
-
-    syllable_df['spectrogram'] = syllables_spec_uint
-    syllable_df = syllable_df[syllable_df['spectrogram'].notnull()]
-    print(f'Number of syllables after padding: {len(syllable_df)}')
-
-    ################################################################################
-    print('Save dataset')
-    save_loc = DATA_DIR / 'syllable_dfs' / DATASET_ID / f'data_{suffix}.pickle'
-    ensure_dir(save_loc)
-    syllable_df.to_pickle(save_loc)
-    save_loc = DATA_DIR / 'syllable_dfs' / DATASET_ID / f'hparams_{suffix}.pickle'
-    with open(save_loc, 'wb') as ff:
-        pickle.dump(hparams, ff)
+    # Save hparams
+    hparams_loc = f'{save_loc}_hparams.pkl'
+    with open(hparams_loc, 'wb') as ff:
+        pkl.dump(hparams, ff)
 
 
 if __name__ == '__main__':
