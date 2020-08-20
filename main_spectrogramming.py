@@ -4,6 +4,7 @@ import pickle as pkl
 import shutil
 
 import librosa
+import soundfile as sf
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -21,8 +22,8 @@ from avgn.utils.paths import DATA_DIR, ensure_dir
 
 def main(debug, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz,
          hop_length_ms, win_length_ms, power):
-    # DATASET_ID = 'BIRD_DB_CATH'
-    DATASET_ID = 'Bird_all'
+    DATASET_ID = 'BIRD_DB_CATH'
+    # DATASET_ID = 'Bird_all'
     # DATASET_ID = 'Test'
     ind_examples = [20, 40, 50, 60, 80, 100]
 
@@ -88,7 +89,7 @@ def main(debug, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz,
     save_loc = DATA_DIR / 'syllables' / f'{DATASET_ID}_{suffix}'
     if os.path.isdir(save_loc):
         raise Exception('already exists')
-    os.mkdir(save_loc)
+    os.makedirs(save_loc)
     for key in syllable_df.key.unique():
         # load audio (key.unique is for loading large wavfiles only once)
         this_syllable_df = syllable_df[syllable_df.key == key]
@@ -137,17 +138,17 @@ def main(debug, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz,
 
             if debug and (counter in ind_examples):
                 # normalised audio
-                librosa.output.write_wav(f'{dump_folder}/{counter}_sn.wav', sn, sr=hparams.sr, norm=True)
-                # Padded mel db norm spectro
+                sf.write(f'{dump_folder}/{counter}_sn.wav', sn, samplerate=hparams.sr)
+                #  Padded mel db norm spectro
                 plt.clf()
                 plt.matshow(mSp, origin="lower")
                 plt.savefig(f'{dump_folder}/{counter}_mSp.pdf')
                 plt.close()
                 audio_reconstruct = inv_spectrogram_librosa(mSp, hparams.sr, hparams,
                                                             mel_inversion_basis=mel_inversion_basis)
-                librosa.output.write_wav(f'{dump_folder}/{counter}_mSp.wav', audio_reconstruct, sr=hparams.sr, norm=True)
+                sf.write(f'{dump_folder}/{counter}_mSp.wav', audio_reconstruct, samplerate=hparams.sr)
 
-    # Save hparams
+    #  Save hparams
     hparams_loc = f'{save_loc}_hparams.pkl'
     with open(hparams_loc, 'wb') as ff:
         pkl.dump(hparams, ff)
@@ -164,8 +165,8 @@ if __name__ == '__main__':
     win_length_ms_l = [None]
     power_l = [1.5]
     for num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz, hop_length_ms, win_length_ms, power in \
-        itertools.product(num_mel_bins_l, n_fft_l, mel_lower_edge_hertz_l, mel_upper_edge_hertz_l,
-                          hop_length_ms_l, win_length_ms_l, power_l):
+            itertools.product(num_mel_bins_l, n_fft_l, mel_lower_edge_hertz_l, mel_upper_edge_hertz_l,
+                              hop_length_ms_l, win_length_ms_l, power_l):
         main(debug, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz,
              hop_length_ms, win_length_ms, power)
 
