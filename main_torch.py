@@ -145,6 +145,7 @@ def main(plot,
         if not load:
             if not os.path.exists(model_path):
                 os.makedirs(model_path)
+                os.mkdir(f'{model.model_dir}/training_plots/')
                 os.mkdir(f'{model.model_dir}/plots/')
             shutil.copy(config_path, f'{model_path}/config.py')
 
@@ -172,15 +173,28 @@ def main(plot,
                 model.save(name=ind_epoch)
 
                 # Plots
-                if not os.path.isdir(f'{model.model_dir}/plots/{ind_epoch}'):
-                    os.mkdir(f'{model.model_dir}/plots/{ind_epoch}')
+                if not os.path.isdir(f'{model.model_dir}/training_plots/{ind_epoch}'):
+                    os.mkdir(f'{model.model_dir}/training_plots/{ind_epoch}')
                 test_dataloader = get_dataloader(dataset_type=config['dataset'], dataset=dataset_val,
                                                  batch_size=num_examples_plot, shuffle=True)
-                savepath = f'{model.model_dir}/plots/{ind_epoch}/reconstruction'
+                savepath = f'{model.model_dir}/training_plots/{ind_epoch}/reconstruction'
                 plot_reconstruction(model, hparams, test_dataloader, savepath)
-                savepath = f'{model.model_dir}/plots/{ind_epoch}/generation'
+                savepath = f'{model.model_dir}/training_plots/{ind_epoch}/generation'
                 plot_generation(model, hparams, num_examples_plot, savepath)
                 del test_dataloader
+
+    # Generations
+    print(f'##### Generating')
+    # Reconstructions
+    test_dataloader = get_dataloader(dataset_type=config['dataset'], dataset=dataset_val,
+                                     batch_size=num_examples_plot, shuffle=True)
+    savepath = f'{model.model_dir}/plots/reconstruction'
+    plot_reconstruction(model, hparams, test_dataloader, savepath)
+    # Sampling
+    savepath = f'{model.model_dir}/plots/generation'
+    plot_generation(model, hparams, num_examples_plot, savepath)
+    # Interpolations
+    # Translations
 
 
 def plot_reconstruction(model, hparams, dataloader, savepath):
