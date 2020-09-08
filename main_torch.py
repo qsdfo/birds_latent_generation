@@ -1,13 +1,15 @@
+import glob
 import importlib
 import os
 import pickle
+import random
 import shutil
 from datetime import datetime
 
 import click
+import soundfile as sf
 import librosa
 import matplotlib.pyplot as plt
-import pandas as pd
 import torch
 from torchvision import datasets, transforms
 
@@ -72,21 +74,24 @@ def main(plot,
                                      ]))
         hparams = None
     else:
-        # data
-        df_loc = DATA_DIR / 'syllable_dfs' / dataset_name / f'data_{config["dataset_preprocessing"]}.pickle'
-        syllable_df = pd.read_pickle(df_loc)
-        num_examples = len(syllable_df)
-        split = 0.9
-        syllable_df_train = syllable_df.iloc[: int(split * num_examples)].reset_index()
-        syllable_df_val = syllable_df.iloc[int(split * num_examples):].reset_index()
-        # dataset_train = SpectroDataset(syllable_df_train)
-        # dataset_val = SpectroDataset(syllable_df_val)
-        dataset_train = SpectroCategoricalDataset(syllable_df_train)
-        dataset_val = SpectroCategoricalDataset(syllable_df_val)
-        # hparam
-        hparams_loc = DATA_DIR / 'syllable_dfs' / dataset_name / f'hparams_{config["dataset_preprocessing"]}.pickle'
+        # Hparams
+        hparams_loc = DATA_DIR / 'syllables' / f'{dataset_name}_{config["dataset_preprocessing"]}_hparams.pkl'
         with open(hparams_loc, 'rb') as ff:
             hparams = pickle.load(ff)
+        # data
+        data_loc = DATA_DIR / 'syllables' / f'{dataset_name}_{config["dataset_preprocessing"]}'
+        syllable_paths = glob.glob(f'{str(data_loc)}/[0-9]*')
+        random.seed(1234)
+        random.shuffle(syllable_paths)
+        num_syllables = len(syllable_paths)
+        print(f'# {num_syllables} syllables')
+        split = 0.9
+        syllable_paths_train = syllable_paths[: int(split * num_syllables)]
+        syllable_paths_val = syllable_paths[int(split * num_syllables):]
+        dataset_train = SpectroDataset(syllable_paths_train)
+        dataset_val = SpectroDataset(syllable_paths_val)
+        # dataset_train = SpectroCategoricalDataset(syllable_df_train)
+        # dataset_val = SpectroCategoricalDataset(syllable_df_val)
 
     # Get dimensions
     val_dataloader = get_dataloader(dataset_type=config['dataset'],
@@ -201,18 +206,18 @@ def plot_reconstruction(model, hparams, dataloader, savepath):
     # Forward pass
     model.eval()
     for _, data in enumerate(dataloader):
-        data_cuda = cuda_variable(data)
-        x_recon = model.reconstruct(data_cuda).cpu().detach().numpy()
+        x_cuda = cuda_variable(data['input'])
+        x_recon = model.reconstruct(x_cuda).cpu().detach().numpy()
         break
     # Plot
-    x = data.cpu().detach().numpy()
+    x_orig = data['input'].numpy()
     dims = x_recon.shape[2:]
     num_examples = x_recon.shape[0]
     plt.clf()
     fig, axes = plt.subplots(nrows=2, ncols=num_examples)
     for i in range(num_examples):
         # show the image
-        axes[0, i].matshow(x[i].reshape(dims), origin="lower")
+        axes[0, i].matshow(x_orig[i].reshape(dims), origin="lower")
         axes[1, i].matshow(x_recon[i].reshape(dims), origin="lower")
     for ax in fig.get_axes():
         ax.set_xticks([])
@@ -225,12 +230,12 @@ def plot_reconstruction(model, hparams, dataloader, savepath):
         mel_basis = build_mel_basis(hparams, hparams.sr, hparams.sr)
         mel_inversion_basis = build_mel_inversion_basis(mel_basis)
         for i in range(num_examples):
-            original_audio = inv_spectrogram_librosa(x[i, 0], hparams.sr, hparams,
+            original_audio = inv_spectrogram_librosa(x_orig[i, 0], hparams.sr, hparams,
                                                      mel_inversion_basis=mel_inversion_basis)
             recon_audio = inv_spectrogram_librosa(x_recon[i, 0], hparams.sr, hparams,
                                                   mel_inversion_basis=mel_inversion_basis)
-            librosa.output.write_wav(f'{savepath}_{i}_original.wav', original_audio, sr=hparams.sr, norm=True)
-            librosa.output.write_wav(f'{savepath}_{i}_recon.wav', recon_audio, sr=hparams.sr, norm=True)
+            sf.write(f'{savepath}_{i}_original.wav', original_audio, samplerate=hparams.sr)
+            sf.write(f'{savepath}_{i}_recon.wav', recon_audio, samplerate=hparams.sr)
 
 
 def plot_generation(model, hparams, num_examples, savepath):
@@ -257,7 +262,7 @@ def plot_generation(model, hparams, num_examples, savepath):
         mel_inversion_basis = build_mel_inversion_basis(mel_basis)
         for i in range(num_examples):
             gen_audio = inv_spectrogram_librosa(gen[i, 0], hparams.sr, hparams, mel_inversion_basis=mel_inversion_basis)
-            librosa.output.write_wav(f'{savepath}_{i}.wav', gen_audio, sr=hparams.sr, norm=True)
+            sf.write(f'{savepath}_{i}.wav', gen_audio, samplerate=hparams.sr)
 
 
 def epoch(model, optimizer, dataloader, num_batches, training):

@@ -85,7 +85,6 @@ def main(debug, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz,
     mel_basis = build_mel_basis(hparams, hparams.sr, hparams.sr)
     mel_inversion_basis = build_mel_inversion_basis(mel_basis)
     counter = 0
-    index = {}
     save_loc = DATA_DIR / 'syllables' / f'{DATASET_ID}_{suffix}'
     if os.path.isdir(save_loc):
         raise Exception('already exists')

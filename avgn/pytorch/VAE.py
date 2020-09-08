@@ -48,7 +48,8 @@ class VAE(nn.Module):
         z = self.reparameterize(mu, logvar)
         return self.decode(z), mu, logvar
 
-    def step(self, x):
+    def step(self, data):
+        x = cuda_variable(data['input'])
         recon_batch, mu, logvar = self(x)
         batch_dim = x.shape[0]
         recon_batch_flat = recon_batch.view(batch_dim, -1)
