@@ -17,7 +17,7 @@ n_z = 32
 deconv_input_shape = (64, 6, 6)
 config = {
     # --- Dataset ---
-    'dataset': 'BIRD_DB_CATH',
+    'dataset': 'Bird_all',
     'dataset_preprocessing': f'wl-{win_length_ms}_'
                              f'hl-{hop_length_ms}_'
                              f'nfft-{n_fft}_'
