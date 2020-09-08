@@ -2,8 +2,6 @@ import itertools
 import os
 import pickle as pkl
 import shutil
-
-import librosa
 import soundfile as sf
 import matplotlib.pyplot as plt
 import numpy as np

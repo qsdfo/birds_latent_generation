@@ -24,12 +24,10 @@ from avgn.utils.paths import DATA_DIR, MODEL_DIR
 
 
 @click.command()
-@click.option('-p', '--plot', is_flag=True)
 @click.option('-c', '--config', type=str)
 @click.option('-l', '--load', type=str)
 @click.option('-t', '--train', is_flag=True)
-def main(plot,
-         config,
+def main(config,
          load,
          train):
     # Use all gpus available
@@ -92,23 +90,6 @@ def main(plot,
         dataset_val = SpectroDataset(syllable_paths_val)
         # dataset_train = SpectroCategoricalDataset(syllable_df_train)
         # dataset_val = SpectroCategoricalDataset(syllable_df_val)
-
-    # Get dimensions
-    val_dataloader = get_dataloader(dataset_type=config['dataset'],
-                                    dataset=dataset_val,
-                                    batch_size=3,
-                                    shuffle=False)
-
-    # Get image dimensions
-    for example_data in val_dataloader:
-        dims = example_data['input'].shape[2:]
-        if plot:
-            fig, ax = plt.subplots(nrows=3)
-            for i in range(3):
-                # show the image
-                ax[i].matshow(example_data['input'][i].reshape(dims), origin="lower")
-            plt.show()
-            break
 
     ##################################################################################
     print(f'##### Model')
