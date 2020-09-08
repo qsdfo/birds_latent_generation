@@ -1,6 +1,7 @@
 import collections
 
 import librosa
+import soundfile as sf
 import noisereduce as nr
 import numpy as np
 import pandas as pd
@@ -187,9 +188,9 @@ def prepare_wav(wav_loc, hparams, dump_folder, debug):
     # get rate and date
     # rate, data = load_wav(wav_loc)
 
-    data, _ = librosa.core.load(wav_loc, sr=hparams.sr)
+    data, _ = librosa.load(wav_loc, sr=hparams.sr)
     if debug:
-        librosa.output.write_wav(f'{dump_folder}/original.wav', data, sr=hparams.sr, norm=True)
+        sf.write(f'{dump_folder}/original.wav', data, samplerate=hparams.sr)
 
     # convert data if needed
     if np.issubdtype(type(data[0]), np.integer):
@@ -204,7 +205,7 @@ def prepare_wav(wav_loc, hparams, dump_folder, debug):
     #         data, hparams.butter_lowcut, hparams.butter_highcut, hparams.sr, order=5
     #     )
     #     if debug:
-    #         librosa.output.write_wav(f'{dump_folder}/butter_bandpass_filter.wav', data, sr=hparams.sr, norm=True)
+    #         librosa.output.write_wav(f'{dump_folder}/butter_bandpass_filter.wav', data, samplerate=hparams.sr)
     #
     #     # reduce noise
     #     if hparams.reduce_noise:
@@ -232,7 +233,7 @@ def prepare_wav(wav_loc, hparams, dump_folder, debug):
                 data, hparams.butter_lowcut, hparams.butter_highcut, hparams.sr, order=5
             )
             if debug:
-                librosa.output.write_wav(f'{dump_folder}/butter_bandpass_filter.wav', data, sr=hparams.sr, norm=True)
+                sf.write(f'{dump_folder}/butter_bandpass_filter.wav', data, samplerate=hparams.sr)
 
             # reduce noise
             if hparams.reduce_noise:
@@ -247,7 +248,7 @@ def prepare_wav(wav_loc, hparams, dump_folder, debug):
     data = np.concatenate(data_cleaned)
 
     if debug:
-        librosa.output.write_wav(f'{dump_folder}/reduce_noise.wav', data, sr=hparams.sr, norm=True)
+        sf.write(f'{dump_folder}/reduce_noise.wav', data, samplerate=hparams.sr)
 
     return data
 

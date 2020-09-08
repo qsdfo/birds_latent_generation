@@ -28,6 +28,7 @@ config = {
 
     # --- Model ---
     'model_type': 'VAE',
+    'output_type': 'continuous',  # continous, categorical
     'n_z': n_z,
     'encoder_kwargs': dict(
         conv_stack=[

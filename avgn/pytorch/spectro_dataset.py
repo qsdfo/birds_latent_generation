@@ -1,3 +1,5 @@
+import pickle
+
 import pandas as pd
 import numpy as np
 import torch
@@ -7,7 +9,7 @@ from torch.utils.data import Dataset
 class SpectroDataset(Dataset):
     """Face Landmarks dataset."""
 
-    def __init__(self, syllable_df):
+    def __init__(self, syllable_paths):
         """
         Args:
             csv_file (string): Path to the csv file with annotations.
@@ -16,16 +18,23 @@ class SpectroDataset(Dataset):
                 on a sample.
         """
         super(SpectroDataset, self).__init__()
-        self.syllable_df = syllable_df
+        self.syllable_paths = syllable_paths
 
     def __len__(self):
-        return len(self.syllable_df)
+        return len(self.syllable_paths)
 
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
             idx = idx.tolist()
-        x_np = np.array(self.syllable_df.spectrogram[idx]).astype(np.float32) / 255.
+        fname = self.syllable_paths[idx]
+        with open(fname, 'rb') as ff:
+            data = pickle.load(ff)
+        x_np = np.array(data['mSp']).astype(np.float32) / 255.
         # conv in pytorch are
         # (batch, channel, height, width)
         sample = np.expand_dims(x_np, axis=0)
-        return sample
+        return {
+            'input': sample,
+            'target': sample,
+            'label': data['label']
+        }
