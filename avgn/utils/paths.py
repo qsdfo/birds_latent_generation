@@ -5,7 +5,7 @@ from datetime import datetime
 import numpy as np
 
 PROJECT_DIR = Path(__file__).resolve().parents[2]
-DATA_DIR = "~/Data"
+DATA_DIR = PROJECT_DIR / "data"
 FIGURE_DIR = PROJECT_DIR / "figures"
 MODEL_DIR = PROJECT_DIR / "models"
 
