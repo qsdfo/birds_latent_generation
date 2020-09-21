@@ -163,15 +163,16 @@ def main(config,
                     os.mkdir(f'{model.model_dir}/training_plots/{ind_epoch}')
                 test_dataloader = get_dataloader(dataset_type=config['dataset'], dataset=dataset_val,
                                                  batch_size=num_examples_plot, shuffle=True)
-                savepath = f'{model.model_dir}/training_plots/{ind_epoch}/reconstruction'
+                savepath = f'{model.model_dir}/training_plots/{ind_epoch}/reconstructions'
+                os.mkdir(savepath)
                 plot_reconstruction(model, hparams, test_dataloader, savepath)
-                savepath = f'{model.model_dir}/training_plots/{ind_epoch}/generation'
+                savepath = f'{model.model_dir}/training_plots/{ind_epoch}/generations'
+                os.mkdir(savepath)
                 plot_generation(model, hparams, num_examples_plot, savepath)
                 del test_dataloader
 
     # Generations
     print(f'##### Generate')
-
     test_dataloader = get_dataloader(dataset_type=config['dataset'], dataset=dataset_val,
                                      batch_size=num_examples_plot, shuffle=True)
     if os.path.isdir(f'{model.model_dir}/plots'):
@@ -179,24 +180,24 @@ def main(config,
         os.mkdir(f'{model.model_dir}/plots')
 
     # Reconstructions
-    savepath = f'{model.model_dir}/plots/reconstructions'
-    os.mkdir(savepath)
-    plot_reconstruction(model, hparams, test_dataloader, savepath)
+    # savepath = f'{model.model_dir}/plots/reconstructions'
+    # os.mkdir(savepath)
+    # plot_reconstruction(model, hparams, test_dataloader, savepath)
 
     # Sampling
-    savepath = f'{model.model_dir}/plots/generations'
-    os.mkdir(savepath)
-    plot_generation(model, hparams, num_examples_plot, savepath)
+    # savepath = f'{model.model_dir}/plots/generations'
+    # os.mkdir(savepath)
+    # plot_generation(model, hparams, num_examples_plot, savepath)
 
     # Linear interpolations
-    savepath = f'{model.model_dir}/plots/linear_interpolations'
-    os.mkdir(savepath)
-    plot_interpolations(model, hparams, test_dataloader, savepath, num_interpolated_points=10, method='linear')
+    # savepath = f'{model.model_dir}/plots/linear_interpolations'
+    # os.mkdir(savepath)
+    # plot_interpolations(model, hparams, test_dataloader, savepath, num_interpolated_points=10, method='linear')
 
-    # TODO
     # Constant r interpolations
-    # savepath = f'{model.model_dir}/plots/constant_r_interpolations'
-    # plot_interpolations(model, hparams, test_dataloader, savepath, method='constant_radius')
+    savepath = f'{model.model_dir}/plots/constant_r_interpolations'
+    os.mkdir(savepath)
+    plot_interpolations(model, hparams, test_dataloader, savepath, num_interpolated_points=10, method='constant_radius')
 
     # TODO
     # Translations
