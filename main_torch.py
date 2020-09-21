@@ -1,3 +1,4 @@
+from avgn.pytorch.generate.plot_tsne_latent import plot_tsne_latent
 import glob
 import importlib
 import os
@@ -195,15 +196,18 @@ def main(config,
     # plot_interpolations(model, hparams, test_dataloader, savepath, num_interpolated_points=10, method='linear')
 
     # Constant r interpolations
-    savepath = f'{model.model_dir}/plots/constant_r_interpolations'
-    os.mkdir(savepath)
-    plot_interpolations(model, hparams, test_dataloader, savepath, num_interpolated_points=10, method='constant_radius')
+    # savepath = f'{model.model_dir}/plots/constant_r_interpolations'
+    # os.mkdir(savepath)
+    # plot_interpolations(model, hparams, test_dataloader, savepath, num_interpolated_points=10, method='constant_radius')
 
     # TODO
     # Translations
 
-    # Check geometric organistation per species
-    # Means, std?
+    # Check geometric organistation of the latent space per species
+    savepath = f'{model.model_dir}/plots/stats'
+    os.mkdir(savepath)
+    # latent_space_stats_per_species(model, test_dataloader, savepath)
+    plot_tsne_latent(model, test_dataloader, savepath)
 
 
 def epoch(model, optimizer, dataloader, num_batches, training):

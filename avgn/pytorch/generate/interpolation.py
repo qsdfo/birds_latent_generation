@@ -62,6 +62,7 @@ def plot_interpolations(model, hparams, dataloader, savepath, num_interpolated_p
                 audio = inv_spectrogram_librosa(x_interpolation[ind_example, 0, :, :, ind_interp], hparams.sr, hparams,
                                                 mel_inversion_basis=mel_inversion_basis)
                 sf.write(f'{savepath}/{ind_example}_{ind_interp}.wav', audio, samplerate=hparams.sr)
+    return
 
 
 def constant_radius_interpolation(start_z, end_z, t):

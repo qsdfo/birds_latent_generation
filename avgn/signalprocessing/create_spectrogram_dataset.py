@@ -217,7 +217,7 @@ def prepare_wav(wav_loc, hparams, dump_folder, debug):
     #######################################
 
     # Chunks to avoid memory issues
-    len_chunk_minutes = 30
+    len_chunk_minutes = 10
     len_chunk_sample = hparams.sr * 60 * len_chunk_minutes
     data_chunks = []
     for t in range(0, len(data), len_chunk_sample):
