@@ -1,4 +1,3 @@
-from avgn.pytorch.generate.plot_tsne_latent import plot_tsne_latent
 import glob
 import importlib
 import os
@@ -12,6 +11,7 @@ import soundfile as sf
 import matplotlib.pyplot as plt
 import torch
 from torchvision import datasets, transforms
+from torch.utils.tensorboard import SummaryWriter
 
 from avgn.pytorch.decoder import Decoder
 from avgn.pytorch.encoder import Encoder
@@ -23,6 +23,8 @@ from avgn.pytorch.spectro_categorical_dataset import SpectroCategoricalDataset
 from avgn.pytorch.spectro_dataset import SpectroDataset
 from avgn.signalprocessing.spectrogramming import build_mel_basis, build_mel_inversion_basis, inv_spectrogram_librosa
 from avgn.utils.paths import DATA_DIR
+from avgn.pytorch.generate.plot_tsne_latent import plot_tsne_latent
+
 
 
 @click.command()
@@ -136,6 +138,8 @@ def main(config,
                 os.mkdir(f'{model.model_dir}/plots/')
             shutil.copy(config_path, f'{model_path}/config.py')
 
+        writer = SummaryWriter(f'{model.model_dir}')
+
         # Epochs
         for ind_epoch in range(config['num_epochs']):
             train_dataloader = get_dataloader(dataset_type=config['dataset'], dataset=dataset_train,
@@ -147,7 +151,9 @@ def main(config,
                                num_batches=config['num_batches'], training=True)
             val_loss = epoch(model, optimizer, val_dataloader,
                              num_batches=config['num_batches'], training=False)
-
+            writer.add_scalar('train_loss', train_loss, ind_epoch)
+            writer.add_scalar('val_loss', val_loss, ind_epoch)
+            
             print(f'Epoch {ind_epoch}:')
             print(f'Train loss {train_loss}:')
             print(f'Val loss {val_loss}:')
