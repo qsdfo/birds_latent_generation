@@ -1,3 +1,4 @@
+from avgn.pytorch.generate.plot_tsne_latent import plot_tsne_latent
 import glob
 import importlib
 import os
@@ -8,19 +9,20 @@ from datetime import datetime
 
 import click
 import soundfile as sf
-import librosa
 import matplotlib.pyplot as plt
 import torch
 from torchvision import datasets, transforms
 
 from avgn.pytorch.decoder import Decoder
 from avgn.pytorch.encoder import Encoder
+from avgn.pytorch.generate.generation import plot_generation
+from avgn.pytorch.generate.interpolation import plot_interpolations
+from avgn.pytorch.generate.reconstruction import plot_reconstruction
 from avgn.pytorch.getters import get_model, get_dataloader
 from avgn.pytorch.spectro_categorical_dataset import SpectroCategoricalDataset
 from avgn.pytorch.spectro_dataset import SpectroDataset
 from avgn.signalprocessing.spectrogramming import build_mel_basis, build_mel_inversion_basis, inv_spectrogram_librosa
-from avgn.utils.cuda_variable import cuda_variable
-from avgn.utils.paths import DATA_DIR, MODEL_DIR
+from avgn.utils.paths import DATA_DIR
 
 
 @click.command()
@@ -50,7 +52,7 @@ def main(config,
         timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         config['timestamp'] = timestamp
 
-    if load:
+    if load is not None:
         model_path = os.path.dirname(config_path)
     else:
         model_path = f'models/{config["savename"]}_{timestamp}'
@@ -92,7 +94,7 @@ def main(config,
         # dataset_val = SpectroCategoricalDataset(syllable_df_val)
 
     ##################################################################################
-    print(f'##### Model')
+    print(f'##### Build model')
     encoder_kwargs = config['encoder_kwargs']
     encoder = Encoder(
         n_z=config['n_z'],
@@ -117,16 +119,15 @@ def main(config,
 
     if load is not None:
         print(f'##### Load model')
-        loadpath = MODEL_DIR / load
-        model.load(path=loadpath, device=device)
+        model.load(name=load, device=device)
 
     model.to(device)
 
     ##################################################################################
-    print(f'##### Training')
     best_val_loss = float('inf')
     num_examples_plot = 10
     if train:
+        print(f'##### Train')
         # Copy config file in the save directory before training
         if not load:
             if not os.path.exists(model_path):
@@ -163,87 +164,50 @@ def main(config,
                     os.mkdir(f'{model.model_dir}/training_plots/{ind_epoch}')
                 test_dataloader = get_dataloader(dataset_type=config['dataset'], dataset=dataset_val,
                                                  batch_size=num_examples_plot, shuffle=True)
-                savepath = f'{model.model_dir}/training_plots/{ind_epoch}/reconstruction'
+                savepath = f'{model.model_dir}/training_plots/{ind_epoch}/reconstructions'
+                os.mkdir(savepath)
                 plot_reconstruction(model, hparams, test_dataloader, savepath)
-                savepath = f'{model.model_dir}/training_plots/{ind_epoch}/generation'
+                savepath = f'{model.model_dir}/training_plots/{ind_epoch}/generations'
+                os.mkdir(savepath)
                 plot_generation(model, hparams, num_examples_plot, savepath)
                 del test_dataloader
 
     # Generations
-    print(f'##### Generating')
-    # Reconstructions
+    print(f'##### Generate')
     test_dataloader = get_dataloader(dataset_type=config['dataset'], dataset=dataset_val,
                                      batch_size=num_examples_plot, shuffle=True)
-    savepath = f'{model.model_dir}/plots/reconstruction'
-    plot_reconstruction(model, hparams, test_dataloader, savepath)
+    if os.path.isdir(f'{model.model_dir}/plots'):
+        shutil.rmtree(f'{model.model_dir}/plots')
+        os.mkdir(f'{model.model_dir}/plots')
+
+    # Reconstructions
+    # savepath = f'{model.model_dir}/plots/reconstructions'
+    # os.mkdir(savepath)
+    # plot_reconstruction(model, hparams, test_dataloader, savepath)
+
     # Sampling
-    savepath = f'{model.model_dir}/plots/generation'
-    plot_generation(model, hparams, num_examples_plot, savepath)
-    # Interpolations
+    # savepath = f'{model.model_dir}/plots/generations'
+    # os.mkdir(savepath)
+    # plot_generation(model, hparams, num_examples_plot, savepath)
+
+    # Linear interpolations
+    # savepath = f'{model.model_dir}/plots/linear_interpolations'
+    # os.mkdir(savepath)
+    # plot_interpolations(model, hparams, test_dataloader, savepath, num_interpolated_points=10, method='linear')
+
+    # Constant r interpolations
+    # savepath = f'{model.model_dir}/plots/constant_r_interpolations'
+    # os.mkdir(savepath)
+    # plot_interpolations(model, hparams, test_dataloader, savepath, num_interpolated_points=10, method='constant_radius')
+
+    # TODO
     # Translations
 
-
-def plot_reconstruction(model, hparams, dataloader, savepath):
-    # Forward pass
-    model.eval()
-    for _, data in enumerate(dataloader):
-        x_cuda = cuda_variable(data['input'])
-        x_recon = model.reconstruct(x_cuda).cpu().detach().numpy()
-        break
-    # Plot
-    x_orig = data['input'].numpy()
-    dims = x_recon.shape[2:]
-    num_examples = x_recon.shape[0]
-    plt.clf()
-    fig, axes = plt.subplots(nrows=2, ncols=num_examples)
-    for i in range(num_examples):
-        # show the image
-        axes[0, i].matshow(x_orig[i].reshape(dims), origin="lower")
-        axes[1, i].matshow(x_recon[i].reshape(dims), origin="lower")
-    for ax in fig.get_axes():
-        ax.set_xticks([])
-        ax.set_yticks([])
-    plt.savefig(f'{savepath}.pdf')
-    plt.close('all')
-
-    # audio
-    if hparams is not None:
-        mel_basis = build_mel_basis(hparams, hparams.sr, hparams.sr)
-        mel_inversion_basis = build_mel_inversion_basis(mel_basis)
-        for i in range(num_examples):
-            original_audio = inv_spectrogram_librosa(x_orig[i, 0], hparams.sr, hparams,
-                                                     mel_inversion_basis=mel_inversion_basis)
-            recon_audio = inv_spectrogram_librosa(x_recon[i, 0], hparams.sr, hparams,
-                                                  mel_inversion_basis=mel_inversion_basis)
-            sf.write(f'{savepath}_{i}_original.wav', original_audio, samplerate=hparams.sr)
-            sf.write(f'{savepath}_{i}_recon.wav', recon_audio, samplerate=hparams.sr)
-
-
-def plot_generation(model, hparams, num_examples, savepath):
-    # forward pass
-    model.eval()
-    gen = model.generate(batch_dim=num_examples).cpu().detach().numpy()
-
-    # plot
-    dims = gen.shape[2:]
-    plt.clf()
-    fig, axes = plt.subplots(ncols=num_examples)
-    for i in range(num_examples):
-        # show the image
-        axes[i].matshow(gen[i].reshape(dims), origin="lower")
-    for ax in fig.get_axes():
-        ax.set_xticks([])
-        ax.set_yticks([])
-    plt.savefig(f'{savepath}.pdf')
-    plt.close('all')
-
-    # audio
-    if hparams is not None:
-        mel_basis = build_mel_basis(hparams, hparams.sr, hparams.sr)
-        mel_inversion_basis = build_mel_inversion_basis(mel_basis)
-        for i in range(num_examples):
-            gen_audio = inv_spectrogram_librosa(gen[i, 0], hparams.sr, hparams, mel_inversion_basis=mel_inversion_basis)
-            sf.write(f'{savepath}_{i}.wav', gen_audio, samplerate=hparams.sr)
+    # Check geometric organistation of the latent space per species
+    savepath = f'{model.model_dir}/plots/stats'
+    os.mkdir(savepath)
+    # latent_space_stats_per_species(model, test_dataloader, savepath)
+    plot_tsne_latent(model, test_dataloader, savepath)
 
 
 def epoch(model, optimizer, dataloader, num_batches, training):

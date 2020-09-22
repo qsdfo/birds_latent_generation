@@ -20,8 +20,8 @@ from avgn.utils.paths import DATA_DIR, ensure_dir
 
 def main(debug, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz,
          hop_length_ms, win_length_ms, power):
-    DATASET_ID = 'BIRD_DB_CATH'
-    # DATASET_ID = 'Bird_all'
+    # DATASET_ID = 'BIRD_DB_CATH'
+    DATASET_ID = 'Bird_all'
     # DATASET_ID = 'Test'
     ind_examples = [20, 40, 50, 60, 80, 100]
 
@@ -71,7 +71,7 @@ def main(debug, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz,
                 hparams=dataset.hparams,
                 labels_to_retain=[],
                 unit="syllables",
-                dict_features_to_retain=[],
+                dict_features_to_retain=['species'],
                 key=key,
             )
             for key in tqdm(dataset.data_files.keys())
@@ -126,7 +126,8 @@ def main(debug, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz,
             save_dict = {
                 'mSp': val,
                 'sn': sn,
-                'label': this_syllable_df.indv[syll_ind]
+                'indv': this_syllable_df.indv[syll_ind],
+                'label': this_syllable_df.species[syll_ind]
             }
             fname = save_loc / str(counter)
             with open(fname, 'wb') as ff:
@@ -146,6 +147,7 @@ def main(debug, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz,
                 sf.write(f'{dump_folder}/{counter}_mSp.wav', audio_reconstruct, samplerate=hparams.sr)
 
     #  Save hparams
+    print("Save hparams")
     hparams_loc = f'{save_loc}_hparams.pkl'
     with open(hparams_loc, 'wb') as ff:
         pkl.dump(hparams, ff)

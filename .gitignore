@@ -1,2 +1,9 @@
-imgs
 models
+figures
+venv
+data
+~/Data
+.idea
+.vscode
+avgn.egg-info
+*.pyc
