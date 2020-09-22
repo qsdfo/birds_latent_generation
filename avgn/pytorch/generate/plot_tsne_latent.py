@@ -16,7 +16,7 @@ def plot_tsne_latent(model, dataloader, savepath):
         z = model.reparameterize(mu, logvar) 
         zs += list(z.cpu().detach().numpy())
         labels += data['label']
-        if batch_counter > 5:
+        if batch_counter > 20:
             break
     z_embedded = TSNE(n_components=3).fit_transform(zs)
     
@@ -30,13 +30,15 @@ def plot_tsne_latent(model, dataloader, savepath):
     plt.clf()
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-    colormap = mpl.cm.tab20.colors
+    colormap = mpl.cm.Set1.colors
     for colorind, (label, points) in enumerate(label_to_points.items()):
         points_np = np.asarray(points)
         color = colormap[colorind]
         xs = points_np[:, 0]
         ys = points_np[:, 1]
         zs = points_np[:, 2]
-        ax.scatter(xs, ys, zs, c=color, marker='o')
+        ax.scatter(xs, ys, zs, color=color, marker='o', label=label)
+    ax.legend()
+    plt.show()
     plt.savefig(f'{savepath}/tsne.pdf')
     plt.close('all')
