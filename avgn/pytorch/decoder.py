@@ -1,5 +1,6 @@
 from torch import nn
 import numpy as np
+import torch
 import torch.nn.functional as F
 
 
@@ -26,16 +27,14 @@ class Decoder(nn.Module):
         return
 
     def forward(self, z):
-        """
-        """
-        # ffnn
+        # ffnn
         y = self.z2deconv(z)
         y = y.view(-1, *self.deconv_input_shape)
 
         # deconvolution stack
-        for layer in range(len(self.deconv_stack)-1):
+        for layer in range(len(self.deconv_stack) - 1):
             y = self.deconv_stack[layer](y)
             y = F.relu(y)
         y = self.deconv_stack[-1](y)
-        x = F.sigmoid(y)
+        x = torch.sigmoid(y)
         return x

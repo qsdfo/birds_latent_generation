@@ -50,7 +50,8 @@ def single_file_test(num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_h
         shutil.rmtree(dump_folder)
     os.makedirs(dump_folder)
 
-    wav_loc = '/home/leo/Recherche/Code/birds_project/birds_latent_generation/data/raw/bird-db/CATH/CATH-CP1/wavs/2009-03-21_08-27-00-000000.wav'
+    data_dir = '/home/leo/Recherche/Code/birds_project/birds_latent_generation/data'
+    wav_loc = f'{data_dir}/raw/bird-db/CATH/CATH-CP1/wavs/2009-03-21_08-27-00-000000.wav'
 
     #  Read wave
     data, _ = prepare_wav(wav_loc, hparams, dump_folder, debug=True)
@@ -110,8 +111,8 @@ def single_file_test(num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_h
     plt.savefig(f'{dump_folder}/{ind}_mel.pdf')
     plt.close()
     mel_inv = griffinlim_librosa(
-        _mel_to_linear(debug_info['mel'], _mel_inverse_basis=mel_inversion_basis)
-        , hparams.sr, hparams)
+        _mel_to_linear(debug_info['mel'], _mel_inverse_basis=mel_inversion_basis), 
+        hparams.sr, hparams)
     librosa.output.write_wav(f'{dump_folder}/{ind}_mel.wav', mel_inv, sr=hparams.sr, norm=True)
 
     # mel_db
@@ -142,7 +143,7 @@ def single_file_test(num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_h
 
 def main(dataset_name):
     ##################################################################################
-    print(f'##### Dataset')
+    print('##### Dataset')
 
     # Choose a preprocessing pipeline
     # win_length_ms = None

@@ -28,6 +28,8 @@ def plot_reconstruction(model, hparams, dataloader, savepath):
     plt.close('all')
 
     # audio
+    original_audios = []
+    reconstruction_audios = []
     if hparams is not None:
         mel_basis = build_mel_basis(hparams, hparams.sr, hparams.sr)
         mel_inversion_basis = build_mel_inversion_basis(mel_basis)
@@ -36,5 +38,16 @@ def plot_reconstruction(model, hparams, dataloader, savepath):
                                                      mel_inversion_basis=mel_inversion_basis)
             recon_audio = inv_spectrogram_librosa(x_recon[i, 0], hparams.sr, hparams,
                                                   mel_inversion_basis=mel_inversion_basis)
-            sf.write(f'{savepath}/{i}_original.wav', original_audio, samplerate=hparams.sr)
-            sf.write(f'{savepath}/{i}_recon.wav', recon_audio, samplerate=hparams.sr)
+            sf.write(f'{savepath}/{i}_original.wav',
+                     original_audio, samplerate=hparams.sr)
+            sf.write(f'{savepath}/{i}_recon.wav',
+                     recon_audio, samplerate=hparams.sr)
+
+            original_audios.append(original_audio)
+            reconstruction_audios.append(recon_audio)
+    return {
+        'original_audios': original_audios,
+        'reconstruction_audios': reconstruction_audios,
+        'original_spectros': x_orig,
+        'reconstruction_spectros': x_recon
+    }

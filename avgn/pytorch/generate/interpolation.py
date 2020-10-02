@@ -54,6 +54,7 @@ def plot_interpolations(model, hparams, dataloader, savepath, num_interpolated_p
     plt.close('all')
 
     # audio
+    audios = None
     if hparams is not None:
         mel_basis = build_mel_basis(hparams, hparams.sr, hparams.sr)
         mel_inversion_basis = build_mel_inversion_basis(mel_basis)
@@ -61,8 +62,15 @@ def plot_interpolations(model, hparams, dataloader, savepath, num_interpolated_p
             for ind_interp in range(num_interpolated_points):
                 audio = inv_spectrogram_librosa(x_interpolation[ind_example, 0, :, :, ind_interp], hparams.sr, hparams,
                                                 mel_inversion_basis=mel_inversion_basis)
+                if audios is None:
+                    audios = np.zeros((num_examples, num_interpolated_points, len(audio)))
+                audios[ind_example, ind_interp] = audio
                 sf.write(f'{savepath}/{ind_example}_{ind_interp}.wav', audio, samplerate=hparams.sr)
-    return
+    return {
+        'audios': audios,
+        'spectros': x_interpolation,
+        'dims': dims
+    }
 
 
 def constant_radius_interpolation(start_z, end_z, t):

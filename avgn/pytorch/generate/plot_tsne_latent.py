@@ -19,7 +19,7 @@ def plot_tsne_latent(model, dataloader, savepath):
         if batch_counter > 20:
             break
     z_embedded = TSNE(n_components=3).fit_transform(zs)
-    
+
     label_to_points = {}
     for index, label in enumerate(labels):
         if label not in label_to_points:
@@ -28,7 +28,7 @@ def plot_tsne_latent(model, dataloader, savepath):
 
     # Plot
     plt.clf()
-    fig = plt.figure()
+    fig = plt.figure(figsize=(15, 15))
     ax = fig.add_subplot(111, projection='3d')
     colormap = mpl.cm.Set1.colors
     for colorind, (label, points) in enumerate(label_to_points.items()):
@@ -42,3 +42,4 @@ def plot_tsne_latent(model, dataloader, savepath):
     plt.show()
     plt.savefig(f'{savepath}/tsne.pdf')
     plt.close('all')
+    return label_to_points

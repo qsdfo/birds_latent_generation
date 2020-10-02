@@ -22,9 +22,15 @@ def plot_generation(model, hparams, num_examples, savepath):
     plt.close('all')
 
     # audio
+    audios = []
     if hparams is not None:
         mel_basis = build_mel_basis(hparams, hparams.sr, hparams.sr)
         mel_inversion_basis = build_mel_inversion_basis(mel_basis)
         for i in range(num_examples):
             gen_audio = inv_spectrogram_librosa(gen[i, 0], hparams.sr, hparams, mel_inversion_basis=mel_inversion_basis)
+            audios.append(gen_audio)
             sf.write(f'{savepath}/{i}.wav', gen_audio, samplerate=hparams.sr)
+    return {
+        'audios': audios,
+        'spectros': gen
+    }
