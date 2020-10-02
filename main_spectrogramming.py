@@ -92,7 +92,7 @@ def main(debug, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz,
         this_syllable_df = syllable_df[syllable_df.key == key]
         wav_loc = dataset.data_files[key].data['wav_loc']
         print(f'{wav_loc}')
-        data = prepare_wav(wav_loc, hparams, dump_folder, debug)
+        data, _ = prepare_wav(wav_loc, hparams, dump_folder, debug=debug)
         data = data.astype('float32')
         # process each syllable
         for syll_ind, (st, et) in enumerate(zip(this_syllable_df.start_time.values, this_syllable_df.end_time.values)):
@@ -108,7 +108,7 @@ def main(debug, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz,
             if type(sn[0]) == int:
                 sn = int16_to_float32(sn)
             # create spec
-            mS, debug_info = spectrogram_librosa(sn, hparams, _mel_basis=mel_basis, plot=debug)
+            mS, debug_info = spectrogram_librosa(sn, hparams, _mel_basis=mel_basis, debug=debug)
 
             # We want spectro representing num_seconds of signal
             # pad_length = int(num_seconds * (1000 / hparams.hop_length_ms))

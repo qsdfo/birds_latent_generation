@@ -1,3 +1,8 @@
+"""
+Create for each wav file a JSON containing meta information.
+If segmentation has been manually done, it also contains start and end of syllables.
+If not, it is necessary to run main_segment.py    
+"""
 from datetime import datetime
 
 from pathlib2 import Path

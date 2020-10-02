@@ -4,7 +4,7 @@ import numpy as np
 from scipy import signal
 
 
-def spectrogram_librosa(y, hparams, _mel_basis=None, plot=False):
+def spectrogram_librosa(y, hparams, _mel_basis=None, debug=False):
     hop_length = None if hparams.hop_length_ms is None else int(hparams.hop_length_ms / 1000 * hparams.sr)
     win_length = None if hparams.win_length_ms is None else int(hparams.win_length_ms / 1000 * hparams.sr)
     # preprocessing cleaning
@@ -27,7 +27,7 @@ def spectrogram_librosa(y, hparams, _mel_basis=None, plot=False):
     Sdb = librosa.amplitude_to_db(A) - hparams.ref_level_db
     # normalise to [0,1]
     Sdb_norm = _normalize(Sdb, hparams)
-    if plot:
+    if debug:
         debug_info = {
             'preemphasis_y': preemphasis_y,
             'S': S,

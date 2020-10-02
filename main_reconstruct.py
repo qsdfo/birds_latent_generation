@@ -1,3 +1,8 @@
+"""
+Used to test the preprocessing stack.
+Not necessary for training or generating
+"""
+
 import itertools
 import os
 import pickle
@@ -48,12 +53,12 @@ def single_file_test(num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_h
     wav_loc = '/home/leo/Recherche/Code/birds_project/birds_latent_generation/data/raw/bird-db/CATH/CATH-CP1/wavs/2009-03-21_08-27-00-000000.wav'
 
     #  Read wave
-    data = prepare_wav(wav_loc, hparams, dump_folder, debug=True)
+    data, _ = prepare_wav(wav_loc, hparams, dump_folder, debug=True)
     data = data[:hparams.sr * 15]
     # create spec
     mel_basis = build_mel_basis(hparams, hparams.sr, hparams.sr)
     mel_inversion_basis = build_mel_inversion_basis(mel_basis)
-    melspec, debug_info = spectrogram_librosa(data, hparams, _mel_basis=mel_basis, plot=True)
+    melspec, debug_info = spectrogram_librosa(data, hparams, _mel_basis=mel_basis, debug=True)
 
     from avgn.signalprocessing.spectrogramming import griffinlim_librosa, _mel_to_linear
 

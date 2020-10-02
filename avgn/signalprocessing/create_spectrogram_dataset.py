@@ -22,8 +22,10 @@ def norm(x):
 
 
 def log_resize_spec(spec, scaling_factor=10):
-    resize_shape = [int(np.log(max(np.shape(spec)[1], 2)) * scaling_factor), np.shape(spec)[0]]
-    resize_spec = np.array(Image.fromarray(spec).resize(resize_shape, Image.ANTIALIAS))
+    resize_shape = [int(np.log(max(np.shape(spec)[1], 2))
+                        * scaling_factor), np.shape(spec)[0]]
+    resize_spec = np.array(Image.fromarray(
+        spec).resize(resize_shape, Image.ANTIALIAS))
     return resize_spec
 
 
@@ -79,7 +81,8 @@ def create_syllable_df(
                     include_labels=include_labels,
                 )
                 for json_file in tqdm(
-                    np.array(dataset.json_files)[list_match(indv, dataset.json_indv)],
+                    np.array(dataset.json_files)[
+                        list_match(indv, dataset.json_indv)],
                     desc="getting syllable wavs",
                     leave=False,
                 )
@@ -132,7 +135,8 @@ def create_syllable_df(
             # Mask spectrograms
             if dataset.hparams.mask_spec:
                 syllables_spec = parallel(
-                    delayed(mask_spec)(syllable, **dataset.hparams.mask_spec_kwargs)
+                    delayed(mask_spec)(
+                        syllable, **dataset.hparams.mask_spec_kwargs)
                     for syllable in tqdm(
                         syllables_spec,
                         total=len(syllables_rate),
@@ -146,7 +150,8 @@ def create_syllable_df(
             # log resize spectrograms
             if log_scale_time:
                 syllables_spec = parallel(
-                    delayed(log_resize_spec)(spec, scaling_factor=log_scaling_factor)
+                    delayed(log_resize_spec)(
+                        spec, scaling_factor=log_scaling_factor)
                     for spec in tqdm(
                         syllables_spec, desc="scaling spectrograms", leave=False
                     )
@@ -184,37 +189,17 @@ def create_syllable_df(
 def prepare_wav(wav_loc, hparams, dump_folder, debug):
     """ load wav and convert to correct format
     """
+    if debug:
+        debug_data = {}
+    else:
+        debug_data = None
 
     # get rate and date
-    # rate, data = load_wav(wav_loc)
-
     data, _ = librosa.load(wav_loc, sr=hparams.sr)
-    if debug:
-        sf.write(f'{dump_folder}/original.wav', data, samplerate=hparams.sr)
 
     # convert data if needed
     if np.issubdtype(type(data[0]), np.integer):
         data = int16_to_float32(data)
-
-    #######################################
-    #######################################
-    #######################################"
-    # # bandpass filter
-    # if hparams is not None:
-    #     data_TTT = butter_bandpass_filter(
-    #         data, hparams.butter_lowcut, hparams.butter_highcut, hparams.sr, order=5
-    #     )
-    #     if debug:
-    #         librosa.output.write_wav(f'{dump_folder}/butter_bandpass_filter.wav', data, samplerate=hparams.sr)
-    #
-    #     # reduce noise
-    #     if hparams.reduce_noise:
-    #         data_TTT = nr.reduce_noise(
-    #             audio_clip=data_TTT, noise_clip=data_TTT, **hparams.noise_reduce_kwargs
-    #         )
-    #######################################
-    #######################################
-    #######################################
 
     # Chunks to avoid memory issues
     len_chunk_minutes = 10
@@ -224,33 +209,38 @@ def prepare_wav(wav_loc, hparams, dump_folder, debug):
         start = t
         end = min(len(data), t + len_chunk_sample)
         data_chunks.append(data[start:end])
+        # only keep one chunk for debug
+        if debug:
+            break
 
     # bandpass filter
     data_cleaned = []
     if hparams is not None:
         for data in data_chunks:
+
+            if debug:
+                debug_data['x'] = data
+
             data = butter_bandpass_filter(
                 data, hparams.butter_lowcut, hparams.butter_highcut, hparams.sr, order=5
             )
             if debug:
-                sf.write(f'{dump_folder}/butter_bandpass_filter.wav', data, samplerate=hparams.sr)
+                debug_data['x_filtered'] = data
 
             # reduce noise
             if hparams.reduce_noise:
                 data = nr.reduce_noise(
                     audio_clip=data, noise_clip=data, **hparams.noise_reduce_kwargs
                 )
+            if debug:
+                debug_data['x_rn'] = data
             data_cleaned.append(data)
     else:
         data_cleaned = data_chunks
 
     #  concatenate chunks
     data = np.concatenate(data_cleaned)
-
-    if debug:
-        sf.write(f'{dump_folder}/reduce_noise.wav', data, samplerate=hparams.sr)
-
-    return data
+    return data, debug_data
 
 
 def create_label_df(
@@ -292,25 +282,5 @@ def create_label_df(
         syllable_df[feat] = json_dict[feat]
     # associate current syllables with key
     syllable_df["key"] = key
-
-    return syllable_df
-
-
-def get_row_audio(syllable_df, wav_loc, hparams):
-    """ load audio and grab individual syllables
-    TODO: for large sparse WAV files, the audio should be loaded only for the syllable
-    """
-
-    # load audio
-    rate, data = prepare_wav(wav_loc, hparams)
-    data = data.astype('float32')
-
-    # get audio for each syllable
-    syllable_df["audio"] = [
-        data[int(st * rate):int(et * rate)]
-        for st, et in zip(syllable_df.start_time.values, syllable_df.end_time.values)
-    ]
-
-    syllable_df["rate"] = rate
 
     return syllable_df

@@ -26,7 +26,6 @@ from avgn.utils.paths import DATA_DIR
 from avgn.pytorch.generate.plot_tsne_latent import plot_tsne_latent
 
 
-
 @click.command()
 @click.option('-c', '--config', type=str)
 @click.option('-l', '--load', type=str)
@@ -153,7 +152,7 @@ def main(config,
                              num_batches=config['num_batches'], training=False)
             writer.add_scalar('train_loss', train_loss, ind_epoch)
             writer.add_scalar('val_loss', val_loss, ind_epoch)
-            
+
             print(f'Epoch {ind_epoch}:')
             print(f'Train loss {train_loss}:')
             print(f'Val loss {val_loss}:')
@@ -182,8 +181,7 @@ def main(config,
     print(f'##### Generate')
     test_dataloader = get_dataloader(dataset_type=config['dataset'], dataset=dataset_val,
                                      batch_size=num_examples_plot, shuffle=True)
-    if os.path.isdir(f'{model.model_dir}/plots'):
-        shutil.rmtree(f'{model.model_dir}/plots')
+    if not os.path.isdir(f'{model.model_dir}/plots'):
         os.mkdir(f'{model.model_dir}/plots')
 
     # Reconstructions
