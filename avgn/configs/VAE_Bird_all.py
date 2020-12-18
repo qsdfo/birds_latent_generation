@@ -73,4 +73,3 @@ config = {
     'timestamp': None,
     'savename': Path(__file__).stem,
 }
-

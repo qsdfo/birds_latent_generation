@@ -31,7 +31,7 @@ def plot_interpolations(model, hparams, dataloader, savepath, num_interpolated_p
             elif method == 'constant_radius':
                 this_z = constant_radius_interpolation(start_z, end_z, t)
             else:
-                raise NotImplemented
+                raise NotImplementedError
             # Decode z
             x_recon = model.decode(this_z).cpu().detach().numpy()
             x_interpolation[:, :, :, :, ind_interp] = x_recon
@@ -118,7 +118,7 @@ def spherical_to_cartesian(s):
     z = torch.zeros_like(s)
     radius = s[:, 0]
     phis = s[:, 1:]
-    for i in range(dim-1):
+    for i in range(dim - 1):
         if i > 0:
             sin_term = torch.prod(torch.sin(phis[:, :i-1]), dim=1)
         else:

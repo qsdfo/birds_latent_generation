@@ -7,16 +7,7 @@ from torch.utils.data import Dataset
 
 
 class SpectroDataset(Dataset):
-    """Face Landmarks dataset."""
-
     def __init__(self, syllable_paths):
-        """
-        Args:
-            csv_file (string): Path to the csv file with annotations.
-            root_dir (string): Directory with all the images.
-            transform (callable, optional): Optional transform to be applied
-                on a sample.
-        """
         super(SpectroDataset, self).__init__()
         self.syllable_paths = syllable_paths
 

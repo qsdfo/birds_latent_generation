@@ -10,6 +10,7 @@ class HParams(object):
         return f'wl-{self.win_length_ms}_' \
                f'hl-{self.hop_length_ms}_' \
                f'nfft-{self.n_fft}_' \
+               f'pad-{self.pad_length}_' \
                f'melb-{self.num_mel_bins}_' \
                f'mell-{self.mel_lower_edge_hertz}_' \
                f'melh-{self.mel_upper_edge_hertz}_' \
@@ -19,6 +20,7 @@ class HParams(object):
         self.win_length_ms = 5
         self.hop_length_ms = 1
         self.n_fft = 1024
+        self.pad_length = 256
         self.ref_level_db = 20
         self.min_level_db = -60
         self.preemphasis = 0.97
