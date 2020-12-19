@@ -14,16 +14,21 @@ class SpectroDataset(Dataset):
     def __len__(self):
         return len(self.syllable_paths)
 
+    @staticmethod
+    def process_mSp(mSp):
+        x_np = np.array(mSp).astype(np.float32) / 255.
+        return np.expand_dims(x_np, axis=0)
+
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
             idx = idx.tolist()
         fname = self.syllable_paths[idx]
         with open(fname, 'rb') as ff:
             data = pickle.load(ff)
-        x_np = np.array(data['mSp']).astype(np.float32) / 255.
+        mSp = data['mSp']
         # conv in pytorch are
         # (batch, channel, height, width)
-        sample = np.expand_dims(x_np, axis=0)
+        sample = SpectroDataset.process_mSp(mSp)
         return {
             'input': sample,
             'target': sample,

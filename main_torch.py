@@ -1,3 +1,5 @@
+import numpy as np
+from avgn.pytorch.spectro_dataset import SpectroDataset
 from avgn.signalprocessing.spectrogramming import build_mel_basis
 from avgn.signalprocessing.create_spectrogram_dataset import prepare_wav
 from main_spectrogramming import process_syllable
@@ -62,7 +64,7 @@ def main(config,
             del train_dataloader, val_dataloader
 
             # if (val_loss < best_val_loss) and (ind_epoch % 200 == 0):
-            if ind_epoch % 200 == 0:
+            if ind_epoch % 10 == 0:
                 # Save model
                 model.save(name=ind_epoch)
 
@@ -73,7 +75,7 @@ def main(config,
                                                  batch_size=num_examples_plot, shuffle=True)
                 savepath = f'{model.model_dir}/training_plots/{ind_epoch}/reconstructions'
                 os.mkdir(savepath)
-                plot_reconstruction(model, hparams, test_dataloader, savepath)
+                plot_reconstruction(model, hparams, test_dataloader, savepath, custom_data=None)
                 savepath = f'{model.model_dir}/training_plots/{ind_epoch}/generations'
                 os.mkdir(savepath)
                 plot_generation(model, hparams, num_examples_plot, savepath)
@@ -81,33 +83,55 @@ def main(config,
 
     # Generations
     print('##### Generate')
+    USE_CUSTOM_SAMPLE = True
     # Use own samples for generation
-    data_source = {
-        0: {
-            'path_start': 'data/raw/source_generation/0.wav',
-            'path_end': 'data/raw/source_generation/1.wav',
-        },
-        1: {
-            'path_start': 'data/raw/source_generation/0.wav',
-            'path_end': 'data/raw/source_generation/2.wav',
-        },
-        2: {
-            'path_start': 'data/raw/source_generation/1.wav',
-            'path_end': 'data/raw/source_generation/2.wav',
+    if USE_CUSTOM_SAMPLE:
+        data_source = {
+            0: {
+                'start': {'path': 'data/raw/source_generation/0.wav'},
+                'end': {'path': 'data/raw/source_generation/1.wav'},
+            },
+            1: {
+                'start': {'path': 'data/raw/source_generation/0.wav'},
+                'end': {'path': 'data/raw/source_generation/2.wav'},
+            },
+            2: {
+                'start': {'path': 'data/raw/source_generation/1.wav'},
+                'end': {'path': 'data/raw/source_generation/2.wav'},
+            }
         }
-    }
-    for k, v in data_source.items():
-        for name, path in v.items():
-            # read file
-            syl, _ = prepare_wav(wav_loc=path, hparams=hparams, debug=False)
-            mel_basis = build_mel_basis(hparams, hparams.sr, hparams.sr)
-            # process syllable
-            sn, mSp, _ = process_syllable(
-                syl=syl, hparams=hparams, mel_basis=mel_basis, debug=False)
-            data_source[k][name]['mSp'] = mSp
-            data_source[k][name]['sn'] = sn
+        start_data = []
+        end_data = []
+        for example_ind, examples_dict in data_source.items():
+            for name in ['start', 'end']:
+                # read file
+                syl, _ = prepare_wav(
+                    wav_loc=examples_dict[name]['path'], hparams=hparams, debug=False)
+                mel_basis = build_mel_basis(hparams, hparams.sr, hparams.sr)
+                # process syllable
+                sn, mSp, _ = process_syllable(
+                    syl=syl, hparams=hparams, mel_basis=mel_basis, debug=False)
+                data_source[example_ind][name]['mSp'] = mSp
+                data_source[example_ind][name]['sn'] = sn
+                if name == 'start':
+                    start_data.append(SpectroDataset.process_mSp(mSp))
+                elif name == 'end':
+                    end_data.append(SpectroDataset.process_mSp(mSp))
+        all_data = start_data + end_data
+        #  Batchify
+        start_data = np.stack(start_data)
+        end_data = np.stack(end_data)
+        all_data = np.stack(all_data)
+        custom_data = {
+            'start_data': start_data,
+            'end_data': end_data,
+            'all_data': all_data,
+        }
+    else:
+        custom_data = None
 
-    # Or dataset
+    # Dataloader from the dataset, used for latent space visualisation and to feed data for reconstruction
+    # and interpolation if not custom examples are provided
     gen_dataloader = get_dataloader(dataset_type=config['dataset'], dataset=dataset_val,
                                     batch_size=num_examples_plot, shuffle=True)
 
@@ -115,32 +139,38 @@ def main(config,
         os.mkdir(f'{model.model_dir}/plots')
 
     # Reconstructions
-    # savepath = f'{model.model_dir}/plots/reconstructions'
-    # os.mkdir(savepath)
-    # plot_reconstruction(model, hparams, gen_dataloader, savepath)
+    savepath = f'{model.model_dir}/plots/reconstructions'
+    if not os.path.isdir(savepath):
+        os.mkdir(savepath)
+    plot_reconstruction(model, hparams, gen_dataloader, savepath, custom_data=custom_data)
 
     # Sampling
-    # savepath = f'{model.model_dir}/plots/generations'
-    # os.mkdir(savepath)
-    # plot_generation(model, hparams, num_examples_plot, savepath)
+    savepath = f'{model.model_dir}/plots/generations'
+    if not os.path.isdir(savepath):
+        os.mkdir(savepath)
+    plot_generation(model, hparams, num_examples_plot, savepath)
 
     # Linear interpolations
-    # savepath = f'{model.model_dir}/plots/linear_interpolations'
-    # os.mkdir(savepath)
-    # plot_interpolations(model, hparams, gen_dataloader, savepath, num_interpolated_points=10, method='linear')
+    savepath = f'{model.model_dir}/plots/linear_interpolations'
+    if not os.path.isdir(savepath):
+        os.mkdir(savepath)
+    plot_interpolations(model, hparams, gen_dataloader, savepath, num_interpolated_points=10, method='linear',
+                        custom_data=custom_data)
 
     # Constant r interpolations
-    # savepath = f'{model.model_dir}/plots/constant_r_interpolations'
-    # os.mkdir(savepath)
-    # plot_interpolations(model, hparams, gen_dataloader, savepath,
-    #                     num_interpolated_points=10, method='constant_radius')
+    savepath = f'{model.model_dir}/plots/constant_r_interpolations'
+    if not os.path.isdir(savepath):
+        os.mkdir(savepath)
+    plot_interpolations(model, hparams, gen_dataloader, savepath,
+                        num_interpolated_points=10, method='constant_radius', custom_data=custom_data)
 
     # TODO
     # Translations
 
     # Check geometric organistation of the latent space per species
     savepath = f'{model.model_dir}/plots/stats'
-    os.mkdir(savepath)
+    if not os.path.isdir(savepath):
+        os.mkdir(savepath)
     # latent_space_stats_per_species(model, gen_dataloader, savepath)
     plot_tsne_latent(model, gen_dataloader, savepath)
 

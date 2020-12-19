@@ -69,7 +69,7 @@ config = {
 
     # ======== Training ========
     'lr': 1e-4,
-    'batch_size': 128,
+    'batch_size': 64,
     'num_batches': 1024,
     'num_epochs': 500000,
 

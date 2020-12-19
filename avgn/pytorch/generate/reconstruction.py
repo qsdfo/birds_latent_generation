@@ -1,18 +1,24 @@
+import torch
 from avgn.signalprocessing.spectrogramming import build_mel_basis, build_mel_inversion_basis, inv_spectrogram_librosa
 from avgn.utils.cuda_variable import cuda_variable
 import matplotlib.pyplot as plt
 import soundfile as sf
 
 
-def plot_reconstruction(model, hparams, dataloader, savepath):
+def plot_reconstruction(model, hparams, dataloader, savepath, custom_data):
     # Forward pass
     model.eval()
-    for _, data in enumerate(dataloader):
-        x_cuda = cuda_variable(data['input'])
+    if custom_data is None:
+        for _, data in enumerate(dataloader):
+            x_orig = data['input'].numpy()
+            x_cuda = cuda_variable(data['input'])
+            x_recon = model.reconstruct(x_cuda).cpu().detach().numpy()
+            break
+    else:
+        x_orig = custom_data['all_data']
+        x_cuda = cuda_variable(torch.tensor(custom_data['all_data']))
         x_recon = model.reconstruct(x_cuda).cpu().detach().numpy()
-        break
     # Plot
-    x_orig = data['input'].numpy()
     dims = x_recon.shape[2:]
     num_examples = x_recon.shape[0]
     plt.clf()
