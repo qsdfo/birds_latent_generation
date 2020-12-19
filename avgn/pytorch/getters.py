@@ -1,3 +1,4 @@
+from avgn.utils.hparams import HParams
 from avgn.pytorch.decoder import Decoder
 from avgn.pytorch.encoder import Encoder
 from avgn.pytorch.spectro_dataset import SpectroDataset

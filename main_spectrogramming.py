@@ -171,7 +171,6 @@ if __name__ == '__main__':
     hop_length_ms_l = [None]
     win_length_ms_l = [None]
     power_l = [1.5]
-
     # We want spectro representing num_seconds of signal
     # pad_length = int(num_seconds / hparams.hop_length_seconds))
     # with, if hparams.hop_length_ms = None, hop_length_seconds = (hparams.sr / (hparams.n_fft / 4))

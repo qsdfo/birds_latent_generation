@@ -1,3 +1,6 @@
+from avgn.signalprocessing.spectrogramming import build_mel_basis
+from avgn.signalprocessing.create_spectrogram_dataset import prepare_wav
+from main_spectrogramming import process_syllable
 import os
 import shutil
 
@@ -21,7 +24,7 @@ def main(config,
 
     # Init model and dataset
     model, dataset_train, dataset_val, optimizer, hparams, config, model_path, config_path = get_model_and_dataset(
-        config_path=config, loading_epoch=load)
+        config=config, loading_epoch=load)
 
     # Training
     best_val_loss = float('inf')
@@ -78,15 +81,43 @@ def main(config,
 
     # Generations
     print('##### Generate')
-    test_dataloader = get_dataloader(dataset_type=config['dataset'], dataset=dataset_val,
-                                     batch_size=num_examples_plot, shuffle=True)
+    # Use own samples for generation
+    data_source = {
+        0: {
+            'path_start': 'data/raw/source_generation/0.wav',
+            'path_end': 'data/raw/source_generation/1.wav',
+        },
+        1: {
+            'path_start': 'data/raw/source_generation/0.wav',
+            'path_end': 'data/raw/source_generation/2.wav',
+        },
+        2: {
+            'path_start': 'data/raw/source_generation/1.wav',
+            'path_end': 'data/raw/source_generation/2.wav',
+        }
+    }
+    for k, v in data_source.items():
+        for name, path in v.items():
+            # read file
+            syl, _ = prepare_wav(wav_loc=path, hparams=hparams, debug=False)
+            mel_basis = build_mel_basis(hparams, hparams.sr, hparams.sr)
+            # process syllable
+            sn, mSp, _ = process_syllable(
+                syl=syl, hparams=hparams, mel_basis=mel_basis, debug=False)
+            data_source[k][name]['mSp'] = mSp
+            data_source[k][name]['sn'] = sn
+
+    # Or dataset
+    gen_dataloader = get_dataloader(dataset_type=config['dataset'], dataset=dataset_val,
+                                    batch_size=num_examples_plot, shuffle=True)
+
     if not os.path.isdir(f'{model.model_dir}/plots'):
         os.mkdir(f'{model.model_dir}/plots')
 
     # Reconstructions
     # savepath = f'{model.model_dir}/plots/reconstructions'
     # os.mkdir(savepath)
-    # plot_reconstruction(model, hparams, test_dataloader, savepath)
+    # plot_reconstruction(model, hparams, gen_dataloader, savepath)
 
     # Sampling
     # savepath = f'{model.model_dir}/plots/generations'
@@ -96,12 +127,12 @@ def main(config,
     # Linear interpolations
     # savepath = f'{model.model_dir}/plots/linear_interpolations'
     # os.mkdir(savepath)
-    # plot_interpolations(model, hparams, test_dataloader, savepath, num_interpolated_points=10, method='linear')
+    # plot_interpolations(model, hparams, gen_dataloader, savepath, num_interpolated_points=10, method='linear')
 
     # Constant r interpolations
     # savepath = f'{model.model_dir}/plots/constant_r_interpolations'
     # os.mkdir(savepath)
-    # plot_interpolations(model, hparams, test_dataloader, savepath,
+    # plot_interpolations(model, hparams, gen_dataloader, savepath,
     #                     num_interpolated_points=10, method='constant_radius')
 
     # TODO
@@ -110,8 +141,8 @@ def main(config,
     # Check geometric organistation of the latent space per species
     savepath = f'{model.model_dir}/plots/stats'
     os.mkdir(savepath)
-    # latent_space_stats_per_species(model, test_dataloader, savepath)
-    plot_tsne_latent(model, test_dataloader, savepath)
+    # latent_space_stats_per_species(model, gen_dataloader, savepath)
+    plot_tsne_latent(model, gen_dataloader, savepath)
 
 
 def epoch(model, optimizer, dataloader, num_batches, training):
