@@ -8,35 +8,48 @@ import soundfile as sf
 import torch
 
 
-def plot_interpolations(model, hparams, dataloader, savepath, num_interpolated_points, method):
+def plot_interpolations(model, hparams, dataloader, savepath, num_interpolated_points, method, custom_data):
     # Forward pass
     model.eval()
-    for _, data in enumerate(dataloader):
-        x_cuda = cuda_variable(data['input'])
+    if custom_data is None:
+        for _, data in enumerate(dataloader):
+            x_cuda = cuda_variable(data['input'])
+            # Get z
+            mu, logvar = model.encode(x_cuda)
+            z = model.reparameterize(mu, logvar)
+            # Arbitrarily choose start and end points as batch_ind and batch_ind + 1
+            start_z = z[:-1]
+            end_z = z[1:]
+            batch_dim, rgb_dim, h_dim, w_dim = x_cuda.shape
+            num_examples = batch_dim - 1
+            break
+    else:
+        x_cuda = cuda_variable(torch.tensor(custom_data['start_data']))
         # Get z
         mu, logvar = model.encode(x_cuda)
-        z = model.reparameterize(mu, logvar)
-        # Arbitrarily choose start and end points as batch_ind and batch_ind + 1
-        start_z = z[:-1]
-        end_z = z[1:]
+        start_z = model.reparameterize(mu, logvar)
+        x_cuda = cuda_variable(torch.tensor(custom_data['end_data']))
+        # Get z
+        mu, logvar = model.encode(x_cuda)
+        end_z = model.reparameterize(mu, logvar)
         batch_dim, rgb_dim, h_dim, w_dim = x_cuda.shape
-        num_examples = batch_dim - 1
-        x_interpolation = np.zeros((num_examples, rgb_dim, h_dim, w_dim, num_interpolated_points))
+        num_examples = batch_dim
 
-        ind_interp = 0
-        for t in np.linspace(start=0, stop=1, num=num_interpolated_points):
-            # Perform interp
-            if method == 'linear':
-                this_z = start_z * (1 - t) + end_z * t
-            elif method == 'constant_radius':
-                this_z = constant_radius_interpolation(start_z, end_z, t)
-            else:
-                raise NotImplementedError
-            # Decode z
-            x_recon = model.decode(this_z).cpu().detach().numpy()
-            x_interpolation[:, :, :, :, ind_interp] = x_recon
-            ind_interp = ind_interp + 1
-        break
+    x_interpolation = np.zeros((num_examples, rgb_dim, h_dim, w_dim, num_interpolated_points))
+
+    ind_interp = 0
+    for t in np.linspace(start=0, stop=1, num=num_interpolated_points):
+        # Perform interp
+        if method == 'linear':
+            this_z = start_z * (1 - t) + end_z * t
+        elif method == 'constant_radius':
+            this_z = constant_radius_interpolation(start_z, end_z, t)
+        else:
+            raise NotImplementedError
+        # Decode z
+        x_recon = model.decode(this_z).cpu().detach().numpy()
+        x_interpolation[:, :, :, :, ind_interp] = x_recon
+        ind_interp = ind_interp + 1
 
     # Plot
     dims = h_dim, w_dim
