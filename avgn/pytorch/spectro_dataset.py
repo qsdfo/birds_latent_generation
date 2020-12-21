@@ -16,7 +16,11 @@ class SpectroDataset(Dataset):
 
     @staticmethod
     def process_mSp(mSp):
-        x_np = np.array(mSp).astype(np.float32) / 255.
+        mSp_np = np.array(mSp)
+        if mSp_np.max() <= 1:
+            x_np = mSp_np.astype(np.float32)
+        else:
+            x_np = mSp_np.astype(np.float32) / 255.
         return np.expand_dims(x_np, axis=0)
 
     def __getitem__(self, idx):
