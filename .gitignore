@@ -6,4 +6,5 @@ data
 .idea
 .vscode
 avgn.egg-info
+.ipynb_checkpoints
 *.pyc
