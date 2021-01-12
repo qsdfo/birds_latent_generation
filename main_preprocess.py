@@ -18,7 +18,7 @@ def main():
     # DT_ID = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
     song_db = None
-    DATASET_ID = 'voizo'
+    DATASET_ID = 'voizo_chunks'
     DT_ID = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
     dataset_path = Path(f'{DATA_DIR}/raw/{DATASET_ID}')

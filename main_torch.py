@@ -111,8 +111,6 @@ def main(config,
                 # process syllable
                 sn, mSp, _ = process_syllable(
                     syl=syl, hparams=hparams, mel_basis=mel_basis, debug=False)
-                # data_source[example_ind][name]['mSp'] = mSp
-                # data_source[example_ind][name]['sn'] = sn
                 if name == 'start':
                     start_data.append(SpectroDataset.process_mSp(mSp))
                 elif name == 'end':

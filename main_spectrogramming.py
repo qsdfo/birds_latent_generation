@@ -43,8 +43,9 @@ def process_syllable(syl, hparams, mel_basis, debug):
 def main(debug, num_mel_bins, n_fft, pad_length, mel_lower_edge_hertz, mel_upper_edge_hertz,
          hop_length_ms, win_length_ms, power):
     # DATASET_ID = 'BIRD_DB_CATH'
-    DATASET_ID = 'Bird_all'
+    # DATASET_ID = 'Bird_all'
     # DATASET_ID = 'Test'
+    DATASET_ID = 'voizo_Corvus_segmented'
     ind_examples = [20, 40, 50, 60, 80, 100]
 
     ################################################################################

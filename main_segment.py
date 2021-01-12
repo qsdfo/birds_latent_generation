@@ -17,20 +17,20 @@ from avgn.utils.paths import DATA_DIR, ensure_dir
 
 
 def main():
-    DATASET_ID = 'CATH'
-    # DATASET_ID = 'Test'
-    # create a unique datetime identifier
-    DT_ID = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-
-
     """
     min_level_db, min_level_db_floor et delta_db:
-    dynamic segmentation will scan from min_level_db to min_level_db_floor with increment delta_db 
+    dynamic segmentation will scan from min_level_db to min_level_db_floor with increment delta_db
     to find the optimal db threshold level to capture syllables which are:
      - longer than min_syllable_length_s
      - smaller than max_vocal_for_spec
     Need careful tweaking of these five parameters to find the optimal automatic segmentation...
     """
+
+    # DATASET_ID = 'voizo_chunks_Nigthingale'
+    DATASET_ID = 'voizo_chunks_Corvus'
+    # create a unique datetime identifier
+    DT_ID = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
     hparams = HParams(
         sr=44100,
         n_fft=4096,
@@ -56,19 +56,24 @@ def main():
     ref_level_db = hparams.ref_level_db
     pre = hparams.preemphasis
     min_level_db = hparams.min_level_db
-    min_level_db_floor = -40
+    min_level_db_floor = -30
     db_delta = 5
     silence_threshold = 0.01
     min_silence_for_spec = 0.05
-    max_vocal_for_spec = 10.0,
+    max_vocal_for_spec = 1.0,
     min_syllable_length_s = 0.2
     butter_min = hparams.butter_lowcut
     butter_max = hparams.butter_highcut
-    spectral_range = [hparams.mel_lower_edge_hertz, hparams.mel_upper_edge_hertz]
+    spectral_range = [hparams.mel_lower_edge_hertz,
+                      hparams.mel_upper_edge_hertz]
 
-    warnings.filterwarnings("ignore", message="'tqdm_notebook' object has no attribute 'sp'")
+    processed_files = []
+    segmented_files = []
 
     def segment_spec_custom(key, df, save=False, plot=False):
+
+        processed_files.append(key)
+
         # load wav
         data, _ = librosa.core.load(df.data["wav_loc"], sr=hparams.sr)
 
@@ -108,9 +113,11 @@ def main():
             )
             plt.show()
 
+        segmented_files.append(key)
+
         # save the results
         json_out = DATA_DIR / "processed" / (DATASET_ID + "_segmented") / DT_ID / "JSON" / (
-                key + ".JSON"
+            key + ".JSON"
         )
 
         json_dict = df.data.copy()
@@ -134,10 +141,13 @@ def main():
     for indv in np.unique(indvs):
         indv_keys = np.array(list(dataset.data_files.keys()))[indvs == indv]
         for key in indv_keys:
-            print(f'##############')
+            print('##############')
+            print(f'# {len(processed_files)}')
             print(f'# {indv}: {key}')
             segment_spec_custom(key, dataset.data_files[key], save=True)
 
+    print(f'Processed files {len(processed_files)}')
+    print(f'Segmented files {len(segmented_files)}')
 
 if __name__ == '__main__':
     main()

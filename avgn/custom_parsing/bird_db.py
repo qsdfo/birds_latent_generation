@@ -9,9 +9,58 @@ import json
 from datetime import time as dtt
 
 
+def generate_json_custom(wavfile, DT_ID):
+    indv = wavfile.parent.parent.stem
+    dataset_id = wavfile.parent.parent.parent.stem
+    wav_loc = wavfile.as_posix()
+    dt = datetime.now()
+    datestring = dt.strftime("%Y-%m-%d")
+
+    DATASET_ID = f'{dataset_id}_{indv}'
+    sr = get_samplerate(wavfile.as_posix())
+    wav_duration = librosa.get_duration(filename=wavfile.as_posix())
+    wav_loc = wavfile.as_posix()
+
+    # make json dictionary
+    json_dict = {
+        "sample_rate": sr,
+        "species": indv,
+        "datetime": datestring,
+        "wav_loc": wav_loc,
+        "samplerate_hz": sr,
+        "length_s": wav_duration,
+    }
+
+    # no manual segmentation
+    json_dict["indvs"] = {
+        indv: {
+            "syllables": {
+                "start_times": [],
+                "end_times": [],
+                "labels": [],
+            }
+        }
+    }
+
+    # generate json
+    json_txt = json.dumps(json_dict, cls=NoIndentEncoder, indent=2)
+
+    json_out = (
+        DATA_DIR / "processed" / DATASET_ID /
+        DT_ID / "JSON" / (wavfile.stem + ".JSON")
+    )
+
+    # save json
+    ensure_dir(json_out.as_posix())
+    print(json_txt, file=open(json_out.as_posix(), "w"))
+    return
+
 def generate_json(wavfile, DT_ID, song_db):
     indv = wavfile.parent.parent.stem
-    dt = datetime.strptime(wavfile.stem, "%Y-%m-%d_%H-%M-%S-%f")
+    try:
+        dt = datetime.strptime(wavfile.stem, "%Y-%m-%d_%H-%M-%S-%f")
+    except ValueError:
+        dt = datetime.now()
     datestring = dt.strftime("%Y-%m-%d")
 
     row = song_db[
@@ -74,7 +123,8 @@ def generate_json(wavfile, DT_ID, song_db):
     json_txt = json.dumps(json_dict, cls=NoIndentEncoder, indent=2)
 
     json_out = (
-        DATA_DIR / "processed" / DATASET_ID / DT_ID / "JSON" / (wavfile.stem + ".JSON")
+        DATA_DIR / "processed" / DATASET_ID /
+        DT_ID / "JSON" / (wavfile.stem + ".JSON")
     )
 
     # save json
