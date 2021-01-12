@@ -101,6 +101,11 @@ def get_model_and_dataset(config, loading_epoch):
             f'{dataset_name}_{config["dataset_preprocessing"]}_hparams.pkl'
         with open(hparams_loc, 'rb') as ff:
             hparams = pickle.load(ff)
+
+        # FIXME: Legacy
+        if not hasattr(hparams, 'pad_length'):
+            hparams.pad_length = 64
+
         # data
         data_loc = DATA_DIR / 'syllables' / \
             f'{dataset_name}_{config["dataset_preprocessing"]}'
