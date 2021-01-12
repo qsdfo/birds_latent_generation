@@ -45,7 +45,7 @@ def main(debug, num_mel_bins, n_fft, pad_length, mel_lower_edge_hertz, mel_upper
     # DATASET_ID = 'BIRD_DB_CATH'
     # DATASET_ID = 'Bird_all'
     # DATASET_ID = 'Test'
-    DATASET_ID = 'voizo_Corvus_segmented'
+    DATASET_ID = 'voizo_all'
     ind_examples = [20, 40, 50, 60, 80, 100]
 
     ################################################################################
