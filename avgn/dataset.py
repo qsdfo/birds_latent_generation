@@ -4,7 +4,7 @@ import numpy as np
 
 from avgn.utils.paths import DATA_DIR, most_recent_subdirectory
 from avgn.signalprocessing.filtering import prepare_mel_matrix
-from avgn.utils.json import read_json
+from avgn.utils.json_custom import read_json
 from avgn.utils.hparams import HParams
 from tqdm.autonotebook import tqdm
 from joblib import Parallel, delayed

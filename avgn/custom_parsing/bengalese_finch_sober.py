@@ -1,5 +1,5 @@
 import librosa
-from avgn.utils.json import NoIndent, NoIndentEncoder
+from avgn.utils.json_custom import NoIndent, NoIndentEncoder
 import json
 import avgn
 from avgn.utils.paths import DATA_DIR
@@ -235,8 +235,8 @@ def readrecf(filename):
 
 def load_cbin(filename, channel=0):
     """
-    loads .cbin files output by EvTAF. 
-    
+    loads .cbin files output by EvTAF.
+
     arguments
     ---------
     filename : string

@@ -1,5 +1,5 @@
 import librosa
-from avgn.utils.json import NoIndent, NoIndentEncoder
+from avgn.utils.json_custom import NoIndent, NoIndentEncoder
 import pandas as pd
 from datetime import datetime
 from praatio import tgio

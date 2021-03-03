@@ -33,6 +33,7 @@ config = {
     'model_type': 'VAE',
     'n_z': n_z,
     'encoder_kwargs': dict(
+        type='Conv_stack',
         conv_stack=[
             nn.Conv2d(1, 64, 3, stride=(2, 2), padding=1),  #  padding = (kernel_size-1)/2
             nn.Conv2d(64, 64, 3, stride=(2, 2), padding=1),
@@ -47,6 +48,7 @@ config = {
     ),
     # Formula for deconv shape WITH NO DILATION = out_dim = in_dim * stride + (k_size - stride)
     'decoder_kwargs': dict(
+        type='Deconv_stack',
         deconv_input_shape=deconv_input_shape,
         z2deconv=[
             nn.Linear(in_features=n_z, out_features=512),

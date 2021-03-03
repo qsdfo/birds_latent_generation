@@ -1,4 +1,4 @@
-from avgn.utils.json import NoIndentEncoder
+from avgn.utils.json_custom import NoIndentEncoder
 import librosa
 import json
 import avgn

@@ -1,5 +1,5 @@
 import numpy as np
-from avgn.pytorch.spectro_dataset import SpectroDataset
+from avgn.pytorch.dataset.spectro_dataset import SpectroDataset
 from avgn.signalprocessing.spectrogramming import build_mel_basis
 from avgn.signalprocessing.create_spectrogram_dataset import prepare_wav
 from main_spectrogramming import process_syllable
@@ -144,7 +144,8 @@ def main(config,
 
     # Sampling
     # savepath = f'{model.model_dir}/plots/generations'
-    # if not os.path.isdir(savepath):
+    # if not os.path.isdir(savepath)
+    # :
     #     os.mkdir(savepath)
     # plot_generation(model, hparams, num_examples_plot, savepath)
 

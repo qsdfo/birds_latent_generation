@@ -1,5 +1,5 @@
 import librosa
-from avgn.utils.json import NoIndent, NoIndentEncoder
+from avgn.utils.json_custom import NoIndent, NoIndentEncoder
 import pandas as pd
 from datetime import datetime
 from praatio import tgio
@@ -48,14 +48,14 @@ def get_phrases(tg, WAVLIST, wav_stems):
 
 def gen_wav_json(wf, wav_df, DT_ID, save_wav=False):
     """ generates a JSON of segmental iformation from the wav_df row
-    
+
     if the flag save_wav is set to true, also generates a WAV file
 
     Arguments:
         wf {[type]} -- [description]
         wav_df {[type]} -- [description]
         DT_ID {[type]} -- [description]
-    
+
     Keyword Arguments:
         save_wav {bool} -- [description] (default: {False})
     """

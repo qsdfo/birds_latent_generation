@@ -1,6 +1,6 @@
 from avgn.utils.audio import get_samplerate
 import librosa
-from avgn.utils.json import NoIndent, NoIndentEncoder
+from avgn.utils.json_custom import NoIndent, NoIndentEncoder
 import json
 import avgn
 from avgn.utils.paths import DATA_DIR

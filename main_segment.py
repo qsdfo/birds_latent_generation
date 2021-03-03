@@ -12,7 +12,7 @@ from avgn.dataset import DataSet
 from avgn.signalprocessing.filtering import butter_bandpass_filter
 from avgn.utils.hparams\
     import HParams
-from avgn.utils.json import NoIndent, NoIndentEncoder
+from avgn.utils.json_custom import NoIndent, NoIndentEncoder
 from avgn.utils.paths import DATA_DIR, ensure_dir
 
 
@@ -25,9 +25,8 @@ def main():
      - smaller than max_vocal_for_spec
     Need careful tweaking of these five parameters to find the optimal automatic segmentation...
     """
-
-    # DATASET_ID = 'voizo_chunks_Nigthingale'
-    DATASET_ID = 'voizo_chunks_Corvus'
+    DATASET_ID = 'voizo_chunks_Nigthingale'
+    # DATASET_ID = 'voizo_chunks_Corvus'
     # create a unique datetime identifier
     DT_ID = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
@@ -151,3 +150,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+    print('done')

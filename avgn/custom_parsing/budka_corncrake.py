@@ -1,5 +1,5 @@
 import librosa
-from avgn.utils.json import  NoIndentEncoder
+from avgn.utils.json_custom import  NoIndentEncoder
 from datetime import datetime
 import json
 import avgn

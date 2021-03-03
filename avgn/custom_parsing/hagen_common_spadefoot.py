@@ -1,5 +1,5 @@
 import librosa
-from avgn.utils.json import  NoIndentEncoder
+from avgn.utils.json_custom import  NoIndentEncoder
 from datetime import datetime
 import json
 import avgn
@@ -27,7 +27,7 @@ def generate_wav_json(row, DT_ID, mp3_path):
 	    / "WAV"
 	    / (fn + ".WAV")
 	)
-	    
+
 	json_out = (
 	    DATA_DIR / "processed" / DATASET_ID / DT_ID / "JSON" / (fn + ".JSON")
 	)

@@ -20,41 +20,43 @@ from avgn.utils.paths import DATA_DIR, ensure_dir
 
 def process_syllable(syl, hparams, mel_basis, debug):
     # Skip silences
-    if len(syl) == 0:
+    syl_len = len(syl)
+    if syl_len == 0:
         return None, None, None
     if np.max(syl) == 0:
         return None, None, None
+    # If too long skip, else pad
+    if syl_len > hparams.chunk_len_samples():
+        return None, None, None
+    else:
+        syl_pad = np.zeros((hparams.chunk_len_samples()))
+        syl_pad[:syl_len] = syl
     # Normalise
-    sn = syl / np.max(syl)
+    sn = syl_pad / np.max(syl_pad)
     # convert to float
     if type(sn[0]) == int:
         sn = int16_to_float32(sn)
     # create spec
-    mS, debug_info = spectrogram_librosa(
-        sn, hparams, _mel_basis=mel_basis, debug=debug)
-    if mS.shape[1] > hparams.pad_length:
-        # Just skip that syllable if its too long
-        return None, None, None
-    else:
-        mSp = pad_spectrogram(mS, hparams.pad_length)
-    return sn, mSp, debug_info
+    mS, debug_info = spectrogram_librosa(sn, hparams, _mel_basis=mel_basis, debug=debug)
+    return sn, mS, debug_info
 
 
-def main(debug, num_mel_bins, n_fft, pad_length, mel_lower_edge_hertz, mel_upper_edge_hertz,
+def main(debug, sr, num_mel_bins, n_fft, chunk_len_ms, mel_lower_edge_hertz, mel_upper_edge_hertz,
          hop_length_ms, win_length_ms, power):
     # DATASET_ID = 'BIRD_DB_CATH'
     # DATASET_ID = 'Bird_all'
     # DATASET_ID = 'Test'
-    DATASET_ID = 'voizo_all'
+    # DATASET_ID = 'voizo_all'
+    DATASET_ID = 'voizo_all_test'
     ind_examples = [20, 40, 50, 60, 80, 100]
 
     ################################################################################
     print('Create dataset')
     hparams = HParams(
-        sr=44100,
+        sr=sr,
         num_mel_bins=num_mel_bins,
         n_fft=n_fft,
-        pad_length=pad_length,
+        chunk_len_ms=chunk_len_ms,
         mel_lower_edge_hertz=mel_lower_edge_hertz,
         mel_upper_edge_hertz=mel_upper_edge_hertz,
         power=power,  # for spectral inversion
@@ -122,15 +124,14 @@ def main(debug, num_mel_bins, n_fft, pad_length, mel_lower_edge_hertz, mel_upper
         # process each syllable
         for syll_ind, (st, et) in enumerate(zip(this_syllable_df.start_time.values, this_syllable_df.end_time.values)):
             s = data[int(st * hparams.sr): int(et * hparams.sr)]
-            sn, mSp, debug_info = process_syllable(
-                syl=s, hparams=hparams, mel_basis=mel_basis, debug=debug)
-            if mSp is None:
+            sn, mS, debug_info = process_syllable(syl=s, hparams=hparams, mel_basis=mel_basis, debug=debug)
+            if sn is None:
                 skipped_counter += 1
                 continue
             # Save as uint to save space
-            val = (mSp * 255).astype('uint8')
+            mS_int = (mS * 255).astype('uint8')
             save_dict = {
-                'mSp': val,
+                'mS_int': mS_int,
                 'sn': sn,
                 'indv': this_syllable_df.indv[syll_ind],
                 'label': this_syllable_df.species[syll_ind]
@@ -146,12 +147,12 @@ def main(debug, num_mel_bins, n_fft, pad_length, mel_lower_edge_hertz, mel_upper
                          sn, samplerate=hparams.sr)
                 #  Padded mel db norm spectro
                 plt.clf()
-                plt.matshow(mSp, origin="lower")
-                plt.savefig(f'{dump_folder}/{counter}_mSp.pdf')
+                plt.matshow(mS, origin="lower")
+                plt.savefig(f'{dump_folder}/{counter}_mS.pdf')
                 plt.close()
-                audio_reconstruct = inv_spectrogram_librosa(mSp, hparams.sr, hparams,
+                audio_reconstruct = inv_spectrogram_librosa(mS, hparams.sr, hparams,
                                                             mel_inversion_basis=mel_inversion_basis)
-                sf.write(f'{dump_folder}/{counter}_mSp.wav',
+                sf.write(f'{dump_folder}/{counter}_mS.wav',
                          audio_reconstruct, samplerate=hparams.sr)
 
     print(f'Skipped counter: {skipped_counter}')
@@ -165,29 +166,31 @@ def main(debug, num_mel_bins, n_fft, pad_length, mel_lower_edge_hertz, mel_upper
 if __name__ == '__main__':
     # Grid search
     debug = True
+    # sr: 44100 for spec-based models, 16000 for sample-based models
+    sr_l = [16000]
     num_mel_bins_l = [64]
-    n_fft_l = [1024]
-    mel_lower_edge_hertz_l = [500]
-    mel_upper_edge_hertz_l = [8000]
+    # there is not much low frequencies, probably a relatively small value is better for better temporal resolution
+    n_fft_l = [512]
+    mel_lower_edge_hertz_l = [1000]
+    mel_upper_edge_hertz_l = [7900]
     hop_length_ms_l = [None]
     win_length_ms_l = [None]
     power_l = [1.5]
-    # We want spectro representing num_seconds of signal
-    # pad_length = int(num_seconds / hparams.hop_length_seconds))
-    # with, if hparams.hop_length_ms = None, hop_length_seconds = (hparams.sr / (hparams.n_fft / 4))
-    # so pad_length = num_seconds * sr / (n_fft/4)
-    # For 1 second, with sr = 44100, n_fft = 1024, pad_length = 172.260
-    pad_length = 128
+    # quite short usually, like chirps
+    chunk_len_ms = 1000
 
-    for num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz, hop_length_ms, win_length_ms, power in \
-            itertools.product(num_mel_bins_l, n_fft_l, mel_lower_edge_hertz_l, mel_upper_edge_hertz_l,
+    for sr, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz, hop_length_ms, win_length_ms, power in \
+            itertools.product(sr_l, num_mel_bins_l, n_fft_l, mel_lower_edge_hertz_l, mel_upper_edge_hertz_l,
                               hop_length_ms_l, win_length_ms_l, power_l):
         main(debug=debug,
+             sr=sr,
              num_mel_bins=num_mel_bins,
              n_fft=n_fft,
-             pad_length=pad_length,
+             chunk_len_ms=chunk_len_ms,
              mel_lower_edge_hertz=mel_lower_edge_hertz,
              mel_upper_edge_hertz=mel_upper_edge_hertz,
              hop_length_ms=hop_length_ms,
              win_length_ms=win_length_ms,
-             power=power)
+             power=power
+             )
+    print('done')

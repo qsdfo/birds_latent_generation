@@ -1,7 +1,7 @@
 import re
 from scipy.io import loadmat
 import pandas as pd
-from avgn.utils.json import NoIndent, NoIndentEncoder
+from avgn.utils.json_custom import NoIndent, NoIndentEncoder
 from datetime import datetime
 import librosa
 import json
@@ -13,13 +13,13 @@ DATASET_ID = "marmoset"
 
 def parse_marmoset_data(wavs, _filetype="wav"):
     """Parse filename of marmoset data into a pandas dataframe
-        
+
     Arguments:
         wavs {[type]} -- [description]
-    
+
     Keyword Arguments:
         _filetype {str} -- [description] (default: {"wav"})
-    
+
     Returns:
         [type] -- [description]
     """
@@ -57,13 +57,13 @@ def parse_marmoset_data(wavs, _filetype="wav"):
 
 def parse_marmoset_calls(row, callers=["monkey1_data", "monkey2_data"]):
     """ Parses a .mat file of marmoset vocalizations into a dataframe
-        
+
     Arguments:
         row {[type]} -- [description]
-    
+
     Keyword Arguments:
         callers {list} -- [description] (default: {["monkey1_data", "monkey2_data"]})
-    
+
     Returns:
         [type] -- [description]
     """

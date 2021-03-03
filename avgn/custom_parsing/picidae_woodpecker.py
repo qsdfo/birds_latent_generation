@@ -1,6 +1,6 @@
 from avgn.utils.audio import get_samplerate
 import librosa
-from avgn.utils.json import NoIndentEncoder
+from avgn.utils.json_custom import NoIndentEncoder
 import json
 import avgn
 from avgn.utils.paths import DATA_DIR
@@ -13,7 +13,7 @@ common_names = {
     'JynxTorquilla': 'Eurasian wryneck',
     'DendrocoposLeucotos': 'Whick-backed woodpecker',
     'DendrocoposMinor': 'Lesser spotted woodpecker',
-    'DendrocoposMajor': 'Great spotted woodpecker' 
+    'DendrocoposMajor': 'Great spotted woodpecker'
 }
 
 def generate_json(row, DT_ID):
@@ -23,12 +23,12 @@ def generate_json(row, DT_ID):
     sr = get_samplerate(row.wavloc.as_posix())
     wav_duration = librosa.get_duration(filename=row.wavloc)
     fn = row.wavloc.stem
-    
+
     DATASET_ID = 'woodpecker_' + species.lower().replace(' ', '_')
     json_out = (
         DATA_DIR / "processed" / DATASET_ID / DT_ID / "JSON" / (fn + ".JSON")
     )
-    
+
     # make json dictionary
     json_dict = {}
     json_dict["indvs"] = {
@@ -43,7 +43,7 @@ def generate_json(row, DT_ID):
     # rate and length
     json_dict["samplerate_hz"] = sr
     json_dict["length_s"] = wav_duration
-    
+
     # dump json
     json_txt = json.dumps(json_dict, cls=NoIndentEncoder, indent=2)
 

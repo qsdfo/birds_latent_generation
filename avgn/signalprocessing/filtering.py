@@ -94,8 +94,7 @@ def prepare_mel_matrix(hparams, rate, return_numpy=True, GPU_backend=False):
     enorm = tf.dtypes.cast(
         tf.expand_dims(
             tf.constant(
-                2.0
-                / (mel_f[2: hparams.num_mel_bins + 2] - mel_f[: hparams.num_mel_bins])
+                2.0 / (mel_f[2: hparams.num_mel_bins + 2] - mel_f[: hparams.num_mel_bins])
             ),
             0,
         ),

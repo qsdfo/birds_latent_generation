@@ -1,5 +1,5 @@
-from pathlib2 import Path
 import pathlib2
+from pathlib2 import Path
 import os
 from datetime import datetime
 import numpy as np
@@ -33,7 +33,7 @@ def ensure_dir(file_path):
 
 
 def most_recent_subdirectory(dataset_loc):
-    """ return the subdirectory that has been generated most 
+    """ return the subdirectory that has been generated most
     recently with the "%Y-%m-%d_%H-%M-%S" time scheme used in AVGN
     """
     subdir_list = list((dataset_loc).iterdir())

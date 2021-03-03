@@ -1,3 +1,5 @@
+import math
+
 class HParams(object):
     """ Hparams was removed from tf 2.0alpha so this is a placeholder
     """
@@ -7,28 +9,37 @@ class HParams(object):
         self.__dict__.update(kwargs)
 
     def __repr__(self):
-        return f'wl-{self.win_length_ms}_' \
+        return f'sr-{self.sr}_' \
+               f'wl-{self.win_length_ms}_' \
                f'hl-{self.hop_length_ms}_' \
                f'nfft-{self.n_fft}_' \
-               f'pad-{self.pad_length}_' \
+               f'chunkLen-{self.chunk_len_ms}_' \
                f'melb-{self.num_mel_bins}_' \
                f'mell-{self.mel_lower_edge_hertz}_' \
-               f'melh-{self.mel_upper_edge_hertz}_' \
-               f'pow-{self.power}'
+               f'melh-{self.mel_upper_edge_hertz}'
+
+    def chunk_len_samples(self):
+        chunk_len_samples = self.chunk_len_ms * self.sr / 1000
+        # set chunk_len_samples to a multiple of hop_length_samples
+        if self.hop_length_ms is not None:
+            hop_length_samples = self.hop_length_ms * self.sr / 1000
+        else:
+            hop_length_samples = self.n_fft / 4
+        chunk_len_samples = int(math.ceil(chunk_len_samples / hop_length_samples) * hop_length_samples)
+        # chunk_len_win = ((self.chunk_len_samples - win_length_samples) / hop_length_samples) + 1
+        return chunk_len_samples
 
     def set_defaults(self):
         self.win_length_ms = 5
         self.hop_length_ms = 1
         self.n_fft = 1024
-        self.pad_length = 256
-        self.ref_level_db = 20
-        self.min_level_db = -60
+        self.chunk_len_ms = 1000
+        self.ref_level_db = -20
+        self.min_level_db = -80
         self.preemphasis = 0.97
         self.num_mel_bins = 64
         self.mel_lower_edge_hertz = 200
         self.mel_upper_edge_hertz = 15000
-        self.power = 1.5  # for spectral inversion
-        self.griffin_lim_iters = 50
         self.butter_lowcut = 500
         self.butter_highcut = 15000
         self.reduce_noise = False

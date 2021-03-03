@@ -1,5 +1,5 @@
 import librosa
-from avgn.utils.json import NoIndentEncoder
+from avgn.utils.json_custom import NoIndentEncoder
 from datetime import datetime
 from avgn.utils.paths import DATA_DIR, ensure_dir
 from avgn.utils.audio import get_samplerate

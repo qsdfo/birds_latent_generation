@@ -1,7 +1,7 @@
-from avgn.utils.hparams import HParams
-from avgn.pytorch.decoder import Decoder
-from avgn.pytorch.encoder import Encoder
-from avgn.pytorch.spectro_dataset import SpectroDataset
+from avgn.pytorch.dataset.sing_dataset import SingDataset
+from avgn.pytorch.decoder.deconv_stack import Deconv_stack
+from avgn.pytorch.encoder.conv_stack import Conv_stack
+from avgn.pytorch.dataset.spectro_dataset import SpectroDataset
 import glob
 import pickle
 import random
@@ -13,8 +13,8 @@ import torch
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
-from avgn.pytorch.VAE import VAE
-from avgn.pytorch.VAE_categorical import VAE_categorical
+from avgn.pytorch.model.VAE import VAE
+from avgn.pytorch.model.VAE_categorical import VAE_categorical
 
 
 def get_model(model_type, model_kwargs, encoder, decoder, model_dir):
@@ -102,10 +102,6 @@ def get_model_and_dataset(config, loading_epoch):
         with open(hparams_loc, 'rb') as ff:
             hparams = pickle.load(ff)
 
-        # FIXME: Legacy
-        if not hasattr(hparams, 'pad_length'):
-            hparams.pad_length = 64
-
         # data
         data_loc = DATA_DIR / 'syllables' / \
             f'{dataset_name}_{config["dataset_preprocessing"]}'
@@ -117,21 +113,29 @@ def get_model_and_dataset(config, loading_epoch):
         split = 0.9
         syllable_paths_train = syllable_paths[: int(split * num_syllables)]
         syllable_paths_val = syllable_paths[int(split * num_syllables):]
-        dataset_train = SpectroDataset(syllable_paths_train)
-        dataset_val = SpectroDataset(syllable_paths_val)
-        # dataset_train = SpectroCategoricalDataset(syllable_df_train)
-        # dataset_val = SpectroCategoricalDataset(syllable_df_val)
+
+        if config['model_type'] == 'SING':
+            dataset_train = SingDataset(syllable_paths_train)
+            dataset_val = SingDataset(syllable_paths_val)
+        elif config['model_type'] == 'VAE':
+            dataset_train = SpectroDataset(syllable_paths_train)
+            dataset_val = SpectroDataset(syllable_paths_val)
+            # dataset_train = SpectroCategoricalDataset(syllable_df_train)
+            # dataset_val = SpectroCategoricalDataset(syllable_df_val)
+        else:
+            raise NotImplementedError
 
     ##################################################################################
     print('##### Build model')
     encoder_kwargs = config['encoder_kwargs']
-    encoder = Encoder(
+    if
+    encoder = Conv_stack(
         n_z=config['n_z'],
         conv_stack=encoder_kwargs['conv_stack'],
         conv2z=encoder_kwargs['conv2z']
     )
     decoder_kwargs = config['decoder_kwargs']
-    decoder = Decoder(
+    decoder = Deconv_stack(
         deconv_input_shape=decoder_kwargs['deconv_input_shape'],
         z2deconv=decoder_kwargs['z2deconv'],
         deconv_stack=decoder_kwargs['deconv_stack'],

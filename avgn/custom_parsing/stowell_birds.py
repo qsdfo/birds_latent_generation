@@ -1,7 +1,7 @@
 import pandas as pd
 from avgn.utils.audio import get_samplerate
 import librosa
-from avgn.utils.json import NoIndentEncoder
+from avgn.utils.json_custom import NoIndentEncoder
 import json
 import avgn
 from avgn.utils.paths import DATA_DIR
@@ -77,7 +77,7 @@ def generate_json(row, DT_ID, noise_indv_df):
     # rate and length
     json_dict["samplerate_hz"] = sr
     json_dict["length_s"] = wav_duration
-    
+
     # get noise loc
     noise_indv_df = noise_indv_df[
         (noise_indv_df.species == row.species)]
@@ -87,7 +87,7 @@ def generate_json(row, DT_ID, noise_indv_df):
         (noise_indv_df.groundx == row.groundx)]
     noise_indv_df = noise_indv_df[
         (noise_indv_df.fgbg == 'bg')]
-      
+
     if len(noise_indv_df[noise_indv_df.wavnum == row.wavnum]) > 0:
         noise_loc = (
             noise_indv_df[noise_indv_df.wavnum == row.wavnum].iloc[0].wavloc.as_posix()

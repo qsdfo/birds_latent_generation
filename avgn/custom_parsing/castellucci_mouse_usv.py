@@ -1,4 +1,4 @@
-from avgn.utils.json import  NoIndentEncoder
+from avgn.utils.json_custom import  NoIndentEncoder
 from datetime import datetime
 from avgn.utils.audio import get_samplerate
 import librosa
@@ -11,11 +11,11 @@ DATASET_ID = 'castellucci_mouse_usv'
 def generate_json(row, DT_ID):
     wavdate = datetime(year=int(row.year), day=int(row.day), month = int(row.month))
     wav_date = wavdate.strftime("%Y-%m-%d_%H-%M-%S")
-    
+
     # wav samplerate and duration
     sr = get_samplerate(row.wav_loc.as_posix())
     wav_duration = librosa.get_duration(filename=row.wav_loc)
-    
+
     # wav general information
     json_dict = {}
     json_dict["datetime"] = wav_date
@@ -32,7 +32,7 @@ def generate_json(row, DT_ID):
     json_dict["indvs"] = {
         row.indv: {}
     }
-    
+
     json_txt = json.dumps(json_dict, cls=NoIndentEncoder, indent=2)
 
     json_out = DATA_DIR / "processed" / DATASET_ID / DT_ID / "JSON" / (row.wav_loc.stem + ".JSON")

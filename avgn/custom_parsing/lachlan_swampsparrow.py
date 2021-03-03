@@ -1,6 +1,6 @@
 import struct
 from avgn.utils.paths import DATA_DIR
-from avgn.utils.json import NoIndent, NoIndentEncoder
+from avgn.utils.json_custom import NoIndent, NoIndentEncoder
 import json
 import numpy as np
 from datetime import datetime
@@ -20,9 +20,9 @@ def annotate_bouts(
     row, songdata_row, individual_row, wav_elements, wav_syllables, DT_ID
 ):
     """Grabs annotation information for swampsparrow and creates JSON labels and saves wav
-    
+
     [description]
-    
+
     Arguments:
         row {[type]} -- [description]
         songdata_row {[type]} -- [description]
