@@ -17,7 +17,7 @@ def spectrogram_sp(y, hparams, _mel_basis=None, debug=False):
 
     # amplitude spectrum
     f, t, S = signal.stft(x=preemphasis_y, fs=hparams.sr, window='hann', nperseg=win_length, noverlap=overlap_length,
-                          nfft=hparams.n_fft, detrend=False, return_onesided=True, boundary='zeros', padded=True, axis=-1)
+                          nfft=None, detrend=False, return_onesided=True, boundary='zeros', padded=True, axis=-1)
     S_abs = np.abs(S)
     # mel-scale ?
     if _mel_basis is not None:
@@ -50,18 +50,27 @@ def spectrogram_sp(y, hparams, _mel_basis=None, debug=False):
 def griffinlim_sp(spectrogram, fs, hparams):
     win_length = hparams.n_fft if hparams.win_length_ms is None else int(hparams.win_length_ms / 1000 * hparams.sr)
     hop_length = win_length // 4 if hparams.hop_length_ms is None else int(hparams.hop_length_ms / 1000 * hparams.sr)
-    overlap_length = win_length - hop_length
-    t, s = signal.istft(spectrogram, fs=fs, window='hann', nperseg=win_length, noverlap=overlap_length,
-                        nfft=hparams.n_fft, input_onesided=True, boundary=True, time_axis=-1, freq_axis=-2)
+    # overlap_length = win_length - hop_length
+    # t, s = signal.istft(spectrogram, fs=fs, window='hann', nperseg=win_length, noverlap=overlap_length,
+    #                     nfft=None, input_onesided=True, boundary=True, time_axis=-1, freq_axis=-2)
+    # return s / np.max(np.abs(s))
+    s = librosa.griffinlim(
+        spectrogram,
+        n_iter=50,
+        hop_length=hop_length,
+        win_length=win_length,
+        momentum=0.5,
+        # momentum=0.99
+    )
     return s / np.max(np.abs(s))
-
 
 def inv_spectrogram_sp(spectrogram, fs, hparams, mel_inversion_basis=None):
     """Converts spectrogram to waveform using librosa"""
     s_unnorm = _denormalize(spectrogram, hparams)
     s_amplitude = _db_to_amplitude(s_unnorm + hparams.ref_level_db)
     if mel_inversion_basis is not None:
-        s_linear = _mel_to_linear(s_amplitude, _mel_inverse_basis=mel_inversion_basis)**(1 / hparams.power)
+        # s_linear = _mel_to_linear(s_amplitude, _mel_inverse_basis=mel_inversion_basis)**(1 / hparams.power)
+        s_linear = _mel_to_linear(s_amplitude, _mel_inverse_basis=mel_inversion_basis)
     else:
         s_linear = s_amplitude
     return griffinlim_sp(s_linear, fs, hparams)
@@ -89,7 +98,7 @@ def build_mel_inversion_basis(_mel_basis):
 
 
 def build_mel_basis(hparams, fs, rate=None, use_n_fft=True):
-    if "n_fft" not in hparams.__dict__ or (use_n_fft == False):
+    if "n_fft" not in hparams.__dict__ or (use_n_fft==False):
         if "num_freq" in hparams.__dict__:
             n_fft = (hparams.num_freq - 1) * 2
         else:
@@ -117,14 +126,14 @@ def _denormalize(S, hparams):
     return (np.clip(S, 0, 1) * - hparams.min_level_db) + hparams.min_level_db
 
 
-def _amplitude_to_db(S, amin=1e-5):
+def _amplitude_to_db(S, amin=1e-10):
     S = np.asarray(S)
     magnitude = np.abs(S)
     power = np.square(magnitude, out=magnitude)
     return _power_to_db(power, amin=amin**2)
 
 
-def _power_to_db(S, amin=1e-10):
+def _power_to_db(S, amin):
     S = np.asarray(S)
     if amin <= 0:
         raise ValueError('amin < 0')

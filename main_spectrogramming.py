@@ -1,3 +1,6 @@
+from avgn.utils.paths import DATA_DIR
+from avgn.utils.hparams import HParams
+from avgn.utils.audio import int16_to_float32
 import itertools
 import os
 import pickle as pkl
@@ -10,12 +13,9 @@ from joblib import Parallel, delayed
 from tqdm import tqdm
 
 from avgn.dataset import DataSet
-from avgn.signalprocessing.create_spectrogram_dataset import create_label_df, prepare_wav, pad_spectrogram
-from avgn.signalprocessing.spectrogramming import build_mel_basis, build_mel_inversion_basis, spectrogram_librosa, \
-    inv_spectrogram_librosa
-from avgn.utils.audio import int16_to_float32
-from avgn.utils.hparams import HParams
-from avgn.utils.paths import DATA_DIR, ensure_dir
+from avgn.signalprocessing.create_spectrogram_dataset import create_label_df, prepare_wav
+from avgn.signalprocessing.spectrogramming_scipy import build_mel_basis, build_mel_inversion_basis, spectrogram_sp, \
+    inv_spectrogram_sp
 
 
 def process_syllable(syl, hparams, mel_basis, debug):
@@ -37,7 +37,7 @@ def process_syllable(syl, hparams, mel_basis, debug):
     if type(sn[0]) == int:
         sn = int16_to_float32(sn)
     # create spec
-    mS, debug_info = spectrogram_librosa(sn, hparams, _mel_basis=mel_basis, debug=debug)
+    mS, debug_info = spectrogram_sp(sn, hparams, _mel_basis=mel_basis, debug=debug)
     return sn, mS, debug_info
 
 
@@ -62,8 +62,8 @@ def main(debug, sr, num_mel_bins, n_fft, chunk_len_ms, mel_lower_edge_hertz, mel
         power=power,  # for spectral inversion
         butter_lowcut=mel_lower_edge_hertz,
         butter_highcut=mel_upper_edge_hertz,
-        ref_level_db=40,
-        min_level_db=-90,
+        ref_level_db=-20,
+        min_level_db=-80,
         mask_spec=False,
         win_length_ms=win_length_ms,
         hop_length_ms=hop_length_ms,
@@ -72,7 +72,6 @@ def main(debug, sr, num_mel_bins, n_fft, chunk_len_ms, mel_lower_edge_hertz, mel
         verbosity=1,
         reduce_noise=True,
         noise_reduce_kwargs={"n_std_thresh": 2.0, "prop_decrease": 0.8},
-        griffin_lim_iters=50
     )
     suffix = hparams.__repr__()
 
@@ -150,8 +149,8 @@ def main(debug, sr, num_mel_bins, n_fft, chunk_len_ms, mel_lower_edge_hertz, mel
                 plt.matshow(mS, origin="lower")
                 plt.savefig(f'{dump_folder}/{counter}_mS.pdf')
                 plt.close()
-                audio_reconstruct = inv_spectrogram_librosa(mS, hparams.sr, hparams,
-                                                            mel_inversion_basis=mel_inversion_basis)
+                audio_reconstruct = inv_spectrogram_sp(mS, hparams.sr, hparams,
+                                                       mel_inversion_basis=mel_inversion_basis)
                 sf.write(f'{dump_folder}/{counter}_mS.wav',
                          audio_reconstruct, samplerate=hparams.sr)
 

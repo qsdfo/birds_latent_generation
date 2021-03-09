@@ -38,6 +38,7 @@ class HParams(object):
         self.min_level_db = -80
         self.preemphasis = 0.97
         self.num_mel_bins = 64
+        self.power = 1
         self.mel_lower_edge_hertz = 200
         self.mel_upper_edge_hertz = 15000
         self.butter_lowcut = 500
