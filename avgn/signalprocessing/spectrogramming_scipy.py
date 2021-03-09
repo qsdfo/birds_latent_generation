@@ -16,12 +16,12 @@ def spectrogram_sp(y, hparams, _mel_basis=None, debug=False):
         return None, None
 
     # amplitude spectrum
-    f, t, S = signal.stft(x=preemphasis_y, fs=hparams.n_fft, window='hann', nperseg=win_length, noverlap=overlap_length,
-                          nfft=hparams.n_fft, detrend=False, return_onesided=True, boundary='zeros', padded=True, axis=- 1)
+    f, t, S = signal.stft(x=preemphasis_y, fs=hparams.sr, window='hann', nperseg=win_length, noverlap=overlap_length,
+                          nfft=hparams.n_fft, detrend=False, return_onesided=True, boundary='zeros', padded=True, axis=-1)
     S_abs = np.abs(S)
     # mel-scale ?
     if _mel_basis is not None:
-        A = _linear_to_mel(S_abs, _mel_basis)
+        A = _linear_to_mel(S_abs**hparams.power, _mel_basis)
     else:
         A = S_abs
     # decibel
@@ -52,7 +52,7 @@ def griffinlim_sp(spectrogram, fs, hparams):
     hop_length = win_length // 4 if hparams.hop_length_ms is None else int(hparams.hop_length_ms / 1000 * hparams.sr)
     overlap_length = win_length - hop_length
     t, s = signal.istft(spectrogram, fs=fs, window='hann', nperseg=win_length, noverlap=overlap_length,
-                        nfft=None, input_onesided=True, boundary=True, time_axis=-1, freq_axis=-2)
+                        nfft=hparams.n_fft, input_onesided=True, boundary=True, time_axis=-1, freq_axis=-2)
     return s / np.max(np.abs(s))
 
 
@@ -61,7 +61,7 @@ def inv_spectrogram_sp(spectrogram, fs, hparams, mel_inversion_basis=None):
     s_unnorm = _denormalize(spectrogram, hparams)
     s_amplitude = _db_to_amplitude(s_unnorm + hparams.ref_level_db)
     if mel_inversion_basis is not None:
-        s_linear = _mel_to_linear(s_amplitude, _mel_inverse_basis=mel_inversion_basis)
+        s_linear = _mel_to_linear(s_amplitude, _mel_inverse_basis=mel_inversion_basis)**(1 / hparams.power)
     else:
         s_linear = s_amplitude
     return griffinlim_sp(s_linear, fs, hparams)
@@ -79,22 +79,12 @@ def _linear_to_mel(spectrogram, _mel_basis):
     return np.dot(_mel_basis, spectrogram)
 
 
-def _mel_to_linear(melspectrogram, _mel_basis=None, _mel_inverse_basis=None):
-    if (_mel_basis is None) and (_mel_inverse_basis is None):
-        raise ValueError("_mel_basis or _mel_inverse_basis needed")
-    elif _mel_inverse_basis is None:
-        with np.errstate(divide="ignore", invalid="ignore"):
-            _mel_inverse_basis = np.nan_to_num(
-                np.divide(_mel_basis, np.sum(_mel_basis.T, axis=1))
-            ).T
+def _mel_to_linear(melspectrogram, _mel_inverse_basis):
     return np.matmul(_mel_inverse_basis, melspectrogram)
 
 
 def build_mel_inversion_basis(_mel_basis):
-    with np.errstate(divide="ignore", invalid="ignore"):
-        mel_inverse_basis = np.nan_to_num(
-            np.divide(_mel_basis, np.sum(_mel_basis.T, axis=1))
-        ).T
+    mel_inverse_basis = np.divide(_mel_basis, np.sum((_mel_basis + _epsilon()).T, axis=1)).T
     return mel_inverse_basis
 
 
@@ -107,7 +97,7 @@ def build_mel_basis(hparams, fs, rate=None, use_n_fft=True):
     else:
         n_fft = hparams.n_fft
     if rate is None:
-        rate = hparams.sample_rate
+        rate = hparams.sr
     _mel_basis = librosa.filters.mel(
         rate,
         n_fft,
@@ -116,7 +106,7 @@ def build_mel_basis(hparams, fs, rate=None, use_n_fft=True):
         fmax=hparams.mel_upper_edge_hertz,
     )
     # Normalise contribution of mel coeff to 1 for 1 output bin
-    return np.nan_to_num(_mel_basis.T / np.sum(_mel_basis, axis=1)).T
+    return (_mel_basis.T / np.sum(_mel_basis + _epsilon(), axis=1)).T
 
 
 def _normalize(S, hparams):
@@ -148,3 +138,6 @@ def _db_to_power(S_db):
 
 def _db_to_amplitude(S_db):
     return _db_to_power(S_db)**0.5
+
+def _epsilon():
+    return 2e-16
