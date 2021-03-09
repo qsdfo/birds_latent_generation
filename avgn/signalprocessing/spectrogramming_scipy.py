@@ -98,7 +98,7 @@ def build_mel_inversion_basis(_mel_basis):
 
 
 def build_mel_basis(hparams, fs, rate=None, use_n_fft=True):
-    if "n_fft" not in hparams.__dict__ or (use_n_fft==False):
+    if "n_fft" not in hparams.__dict__ or not use_n_fft:
         if "num_freq" in hparams.__dict__:
             n_fft = (hparams.num_freq - 1) * 2
         else:
