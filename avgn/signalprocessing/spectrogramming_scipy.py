@@ -16,8 +16,9 @@ def spectrogram_sp(y, hparams, _mel_basis=None, debug=False):
         return None, None
 
     # amplitude spectrum
-    f, t, S = signal.stft(x=preemphasis_y, fs=hparams.sr, window='hann', nperseg=win_length, noverlap=overlap_length,
-                          nfft=None, detrend=False, return_onesided=True, boundary='zeros', padded=True, axis=-1)
+    # f, t, S = signal.stft(x=preemphasis_y, fs=hparams.sr, window='hann', nperseg=win_length, noverlap=overlap_length,
+    #                       nfft=None, detrend=False, return_onesided=True, boundary='zeros', padded=True, axis=-1)
+    S = librosa.stft(y=preemphasis_y, n_fft=hparams.n_fft, hop_length=hop_length, win_length=win_length)
     S_abs = np.abs(S)
     # mel-scale ?
     if _mel_basis is not None:
@@ -69,8 +70,8 @@ def inv_spectrogram_sp(spectrogram, fs, hparams, mel_inversion_basis=None):
     s_unnorm = _denormalize(spectrogram, hparams)
     s_amplitude = _db_to_amplitude(s_unnorm + hparams.ref_level_db)
     if mel_inversion_basis is not None:
-        # s_linear = _mel_to_linear(s_amplitude, _mel_inverse_basis=mel_inversion_basis)**(1 / hparams.power)
-        s_linear = _mel_to_linear(s_amplitude, _mel_inverse_basis=mel_inversion_basis)
+        s_linear = _mel_to_linear(s_amplitude, _mel_inverse_basis=mel_inversion_basis)**(1 / hparams.power)
+        # s_linear = _mel_to_linear(s_amplitude, _mel_inverse_basis=mel_inversion_basis)
     else:
         s_linear = s_amplitude
     return griffinlim_sp(s_linear, fs, hparams)

@@ -82,10 +82,10 @@ def calibrate_db_file(sr, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_e
 if __name__ == '__main__':
     # Grid search
     sr = 44100
-    num_mel_bins = 512
+    num_mel_bins = 64
     n_fft = 1024
-    mel_lower_edge_hertz = 500
-    mel_upper_edge_hertz = 22000
+    mel_lower_edge_hertz = 1000
+    mel_upper_edge_hertz = 20000
     hop_length_ms = None
     win_length_ms = None
     power = 1.5

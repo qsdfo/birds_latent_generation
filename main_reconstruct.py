@@ -161,10 +161,10 @@ if __name__ == '__main__':
     # Grid search
     debug = True
     sr_l = [44100]
-    num_mel_bins_l = [128]
-    n_fft_l = [1024]
+    num_mel_bins_l = [64]
+    n_fft_l = [512]
     mel_lower_edge_hertz_l = [500]
-    mel_upper_edge_hertz_l = [12000]
+    mel_upper_edge_hertz_l = [12000, 16000, 20000]
     hop_length_ms_l = [None]
     win_length_ms_l = [None]
     power_l = [1.5]
@@ -184,8 +184,8 @@ if __name__ == '__main__':
             hop_length_ms=hop_length_ms,
             win_length_ms=win_length_ms,
             power=power,
-            ref_level_db=-20,  # -20
-            min_level_db=-180,  # -200 - ref_lvl
+            ref_level_db=40,  # -20
+            min_level_db=-240,  # -200 - ref_lvl
             dataset_loc=dataset_loc
         )
 
