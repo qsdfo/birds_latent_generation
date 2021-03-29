@@ -94,7 +94,7 @@ def dynamic_threshold_segmentation(
     overlap_length = win_length - hop_length
     preemphasis_y = preemphasis(x=vocalization, pre_emphasis=pre)
     _, time_bins, S = signal.stft(x=preemphasis_y, fs=rate, window='hann', nperseg=win_length, noverlap=overlap_length,
-                                 nfft=n_fft, detrend=False, return_onesided=True, boundary=None, padded=True, axis=-1)
+                                  nfft=n_fft, detrend=False, return_onesided=True, boundary=None, padded=True, axis=-1)
     spec_orig = np.abs(S)
     ####################################################
     #################################################### T  E  S  T  LIBROSA
@@ -106,10 +106,6 @@ def dynamic_threshold_segmentation(
     ####################################################
     ####################################################
     spec_orig = _amplitude_to_db(spec_orig)
-
-    # Get useful stft analysis parameters
-    hop_length_sec = hop_length_ms / 1000
-    half_win_length_sec = win_length_ms / 1000
 
     # Cut spectrogram to spectral range
     if spectral_range is not None:
