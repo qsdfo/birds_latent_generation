@@ -37,12 +37,21 @@ def process_syllable(syl, hparams, mel_basis, debug):
     if type(sn[0]) == int:
         sn = int16_to_float32(sn)
     # create spec
-    mS, debug_info = spectrogram_sp(sn, hparams, _mel_basis=mel_basis, debug=debug)
+    mS, debug_info = spectrogram_sp(y=sn,
+                                    sr=hparams.sr,
+                                    n_fft=hparams.srn_fft,
+                                    win_length_ms=hparams.win_length_ms,
+                                    hop_length_ms=hparams.hop_length_ms,
+                                    ref_level_db=hparams.ref_level_db,
+                                    _mel_basis=mel_basis,
+                                    pre_emphasis=hparams.preemphasis,
+                                    power=hparams.power,
+                                    debug=debug)
     return sn, mS, debug_info
 
 
 def main(debug, sr, num_mel_bins, n_fft, chunk_len_ms, mel_lower_edge_hertz, mel_upper_edge_hertz,
-         hop_length_ms, win_length_ms, power):
+         hop_length_ms, win_length_ms, ref_level_db, power):
     # DATASET_ID = 'BIRD_DB_CATH'
     # DATASET_ID = 'Bird_all'
     # DATASET_ID = 'Test'
@@ -62,8 +71,7 @@ def main(debug, sr, num_mel_bins, n_fft, chunk_len_ms, mel_lower_edge_hertz, mel
         power=power,  # for spectral inversion
         butter_lowcut=mel_lower_edge_hertz,
         butter_highcut=mel_upper_edge_hertz,
-        ref_level_db=-20,
-        min_level_db=-80,
+        ref_level_db=ref_level_db,
         mask_spec=False,
         win_length_ms=win_length_ms,
         hop_length_ms=hop_length_ms,
@@ -123,7 +131,8 @@ def main(debug, sr, num_mel_bins, n_fft, chunk_len_ms, mel_lower_edge_hertz, mel
         # process each syllable
         for syll_ind, (st, et) in enumerate(zip(this_syllable_df.start_time.values, this_syllable_df.end_time.values)):
             s = data[int(st * hparams.sr): int(et * hparams.sr)]
-            sn, mS, debug_info = process_syllable(syl=s, hparams=hparams, mel_basis=mel_basis, debug=debug)
+            sn, mS, debug_info = process_syllable(
+                syl=s, hparams=hparams, mel_basis=mel_basis, debug=debug)
             if sn is None:
                 skipped_counter += 1
                 continue
@@ -169,18 +178,22 @@ if __name__ == '__main__':
     sr_l = [16000]
     num_mel_bins_l = [64]
     # there is not much low frequencies, probably a relatively small value is better for better temporal resolution
-    n_fft_l = [512]
-    mel_lower_edge_hertz_l = [1000]
+    n_fft_l = [512]  # 512, but if sr is 16k, we can use a smaller n_fft like 128
+    # lowest freq = sr / n_fft does not need to be lower
+    # than mel_lower_eddge + gain temporal resolution, but increases number of frames in th STFT.... tradeoff!!
+    mel_lower_edge_hertz_l = [500]
     mel_upper_edge_hertz_l = [7900]
     hop_length_ms_l = [None]
     win_length_ms_l = [None]
     power_l = [1.5]
+    ref_level_db_l = [-35]
     # quite short usually, like chirps
     chunk_len_ms = 1000
 
-    for sr, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz, hop_length_ms, win_length_ms, power in \
+    for sr, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz, hop_length_ms, \
+        win_length_ms, ref_level_db, power in \
             itertools.product(sr_l, num_mel_bins_l, n_fft_l, mel_lower_edge_hertz_l, mel_upper_edge_hertz_l,
-                              hop_length_ms_l, win_length_ms_l, power_l):
+                              hop_length_ms_l, win_length_ms_l, ref_level_db_l, power_l):
         main(debug=debug,
              sr=sr,
              num_mel_bins=num_mel_bins,
@@ -190,6 +203,7 @@ if __name__ == '__main__':
              mel_upper_edge_hertz=mel_upper_edge_hertz,
              hop_length_ms=hop_length_ms,
              win_length_ms=win_length_ms,
+             ref_level_db=ref_level_db,
              power=power
              )
     print('done')

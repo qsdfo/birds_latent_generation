@@ -1,44 +1,41 @@
 import librosa
-import six
 import numpy as np
 from scipy import signal
 
 
-def spectrogram_sp(y, hparams, _mel_basis=None, debug=False):
-    win_length = hparams.n_fft if hparams.win_length_ms is None else int(hparams.win_length_ms / 1000 * hparams.sr)
-    hop_length = win_length // 4 if hparams.hop_length_ms is None else int(hparams.hop_length_ms / 1000 * hparams.sr)
+def spectrogram_sp(y, sr, n_fft, win_length_ms, hop_length_ms, ref_level_db, _mel_basis, pre_emphasis, power, debug):
+    win_length = n_fft if win_length_ms is None else int(win_length_ms / 1000 * sr)
+    hop_length = win_length // 4 if hop_length_ms is None else int(hop_length_ms / 1000 * sr)
     overlap_length = win_length - hop_length
     # preprocessing cleaning
-    preemphasis_y = preemphasis(y, hparams)  # low-pass filtering to remove noise
+    # low-pass filtering to remove noise
+    preemphasis_y = preemphasis(y, pre_emphasis)
 
     # Check chunk len
     if len(preemphasis_y) < win_length:
         return None, None
 
     # amplitude spectrum
-    # f, t, S = signal.stft(x=preemphasis_y, fs=hparams.sr, window='hann', nperseg=win_length, noverlap=overlap_length,
-    #                       nfft=None, detrend=False, return_onesided=True, boundary='zeros', padded=True, axis=-1)
-    S = librosa.stft(y=preemphasis_y, n_fft=hparams.n_fft, hop_length=hop_length, win_length=win_length)
+    f, t, S = signal.stft(x=preemphasis_y, fs=sr, window='hann', nperseg=win_length, noverlap=overlap_length,
+                          nfft=n_fft, detrend=False, return_onesided=True, boundary=None, padded=True, axis=-1)
     S_abs = np.abs(S)
     # mel-scale ?
     if _mel_basis is not None:
-        A = _linear_to_mel(S_abs**hparams.power, _mel_basis)
+        A = _linear_to_mel(S_abs**power, _mel_basis)
     else:
         A = S_abs
     # decibel
     Sdb_unref = _amplitude_to_db(A)
     max_db = Sdb_unref.max()
     min_db = Sdb_unref.min()
-    Sdb = Sdb_unref - hparams.ref_level_db
-    # normalise to [0,1]
-    Sdb_norm = _normalize(Sdb, hparams)
+    Sdb_norm = _normalize(Sdb_unref, min_db=_min_level_db(), max_db=ref_level_db)
     if debug:
         debug_info = {
             'preemphasis_y': preemphasis_y,
             'S': S,
             'S_abs': S_abs,
             'mel': A,
-            'mel_db': Sdb,
+            'mel_db': Sdb_unref,
             'mel_db_norm': Sdb_norm,
             'max_db': max_db,
             'min_db': min_db
@@ -49,8 +46,10 @@ def spectrogram_sp(y, hparams, _mel_basis=None, debug=False):
 
 
 def griffinlim_sp(spectrogram, fs, hparams):
-    win_length = hparams.n_fft if hparams.win_length_ms is None else int(hparams.win_length_ms / 1000 * hparams.sr)
-    hop_length = win_length // 4 if hparams.hop_length_ms is None else int(hparams.hop_length_ms / 1000 * hparams.sr)
+    win_length = hparams.n_fft if hparams.win_length_ms is None else int(
+        hparams.win_length_ms / 1000 * hparams.sr)
+    hop_length = win_length // 4 if hparams.hop_length_ms is None else int(
+        hparams.hop_length_ms / 1000 * hparams.sr)
     # overlap_length = win_length - hop_length
     # t, s = signal.istft(spectrogram, fs=fs, window='hann', nperseg=win_length, noverlap=overlap_length,
     #                     nfft=None, input_onesided=True, boundary=True, time_axis=-1, freq_axis=-2)
@@ -65,24 +64,26 @@ def griffinlim_sp(spectrogram, fs, hparams):
     )
     return s / np.max(np.abs(s))
 
+
 def inv_spectrogram_sp(spectrogram, fs, hparams, mel_inversion_basis=None):
     """Converts spectrogram to waveform using librosa"""
     s_unnorm = _denormalize(spectrogram, hparams)
     s_amplitude = _db_to_amplitude(s_unnorm + hparams.ref_level_db)
     if mel_inversion_basis is not None:
-        s_linear = _mel_to_linear(s_amplitude, _mel_inverse_basis=mel_inversion_basis)**(1 / hparams.power)
+        s_linear = _mel_to_linear(
+            s_amplitude, _mel_inverse_basis=mel_inversion_basis)**(1 / hparams.power)
         # s_linear = _mel_to_linear(s_amplitude, _mel_inverse_basis=mel_inversion_basis)
     else:
         s_linear = s_amplitude
     return griffinlim_sp(s_linear, fs, hparams)
 
 
-def preemphasis(x, hparams):
-    return signal.lfilter([1, -hparams.preemphasis], [1], x)
+def preemphasis(x, pre_emphasis):
+    return signal.lfilter([1, -pre_emphasis], [1], x)
 
 
-def inv_preemphasis(x, hparams):
-    return signal.lfilter([1], [1, -hparams.preemphasis], x)
+def inv_preemphasis(x, pre_emphasis):
+    return signal.lfilter([1], [1, -pre_emphasis], x)
 
 
 def _linear_to_mel(spectrogram, _mel_basis):
@@ -94,7 +95,8 @@ def _mel_to_linear(melspectrogram, _mel_inverse_basis):
 
 
 def build_mel_inversion_basis(_mel_basis):
-    mel_inverse_basis = np.divide(_mel_basis, np.sum((_mel_basis + _epsilon()).T, axis=1)).T
+    mel_inverse_basis = np.divide(_mel_basis, np.sum(
+        (_mel_basis + _epsilon()).T, axis=1)).T
     return mel_inverse_basis
 
 
@@ -118,27 +120,27 @@ def build_mel_basis(hparams, fs, rate=None, use_n_fft=True):
     # Normalise contribution of mel coeff to 1 for 1 output bin
     return (_mel_basis.T / np.sum(_mel_basis + _epsilon(), axis=1)).T
 
-
-def _normalize(S, hparams):
-    return np.clip((S - hparams.min_level_db) / -hparams.min_level_db, 0, 1)
-
-
-def _denormalize(S, hparams):
-    return (np.clip(S, 0, 1) * - hparams.min_level_db) + hparams.min_level_db
+def _normalize(S, min_db, max_db):
+    return np.clip((S - min_db) / (max_db - min_db), 0, 1)
 
 
-def _amplitude_to_db(S, amin=1e-10):
+def _denormalize(S, min_db, max_db):
+    return (np.clip(S, 0, 1) * (max_db - min_db)) + min_db
+
+
+def _amplitude_to_db(S):
     S = np.asarray(S)
     magnitude = np.abs(S)
     power = np.square(magnitude, out=magnitude)
-    return _power_to_db(power, amin=amin**2)
+    return _power_to_db(power)
 
 
-def _power_to_db(S, amin):
+def _power_to_db(S):
+    a_db_min = _a_min()**2
     S = np.asarray(S)
-    if amin <= 0:
+    if a_db_min <= 0:
         raise ValueError('amin < 0')
-    log_spec = 10.0 * np.log10(np.maximum(amin, S))
+    log_spec = 10.0 * np.log10(np.maximum(a_db_min, S))
     return log_spec
 
 
@@ -149,5 +151,16 @@ def _db_to_power(S_db):
 def _db_to_amplitude(S_db):
     return _db_to_power(S_db)**0.5
 
+
 def _epsilon():
     return 2e-16
+
+
+def _a_min():
+    return 1e-10
+
+
+def _min_level_db():
+    a_min_db = _a_min()**2
+    min_level = 10.0 * np.log10(a_min_db)
+    return min_level

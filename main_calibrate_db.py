@@ -13,7 +13,7 @@ from avgn.utils.paths import DATA_DIR
 
 
 def calibrate_db(sr, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz, hop_length_ms, win_length_ms,
-                 power, ref_level_db, min_level_db, dataset_loc):
+                 power, ref_level_db, dataset_loc):
 
     wavs = glob.glob(f'{dataset_loc}/*/*/*.wav')
     min_db = 100000
@@ -21,8 +21,7 @@ def calibrate_db(sr, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_h
     for wav_loc in wavs:
         print(wav_loc)
         ret = calibrate_db_file(sr, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz,
-                                hop_length_ms, win_length_ms, power, ref_level_db, min_level_db,
-                                wav_loc)
+                                hop_length_ms, win_length_ms, power, ref_level_db, wav_loc)
         if ret is None:
             continue
         min_db = min(min_db, ret['min_db'])
@@ -35,7 +34,7 @@ def calibrate_db(sr, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_h
 
 
 def calibrate_db_file(sr, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz, hop_length_ms, win_length_ms,
-                      power, ref_level_db, min_level_db, wav_loc):
+                      power, ref_level_db, wav_loc):
 
     hparams = HParams(
         sr=sr,
@@ -47,7 +46,6 @@ def calibrate_db_file(sr, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_e
         butter_lowcut=mel_lower_edge_hertz,
         butter_highcut=mel_upper_edge_hertz,
         ref_level_db=ref_level_db,  # 20
-        min_level_db=min_level_db,  # 60
         mask_spec=False,
         win_length_ms=win_length_ms,
         hop_length_ms=hop_length_ms,
@@ -69,10 +67,22 @@ def calibrate_db_file(sr, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_e
     data, _ = prepare_wav(wav_loc, hparams, debug=True)
 
     # create spec
-    mel_basis = build_mel_basis(hparams, hparams.sr, hparams.sr)
+    if num_mel_bins is not None:
+        mel_basis = build_mel_basis(hparams, hparams.sr, hparams.sr)
+    else:
+        mel_basis = None
     # melspec, debug_info = spectrogram_librosa(data, hparams, _mel_basis=mel_basis, debug=True)
-    _, debug_info = spectrogram_sp(
-        data, hparams, _mel_basis=mel_basis, debug=True)
+    _, debug_info = spectrogram_sp(y=data,
+                                   sr=hparams.sr,
+                                   n_fft=hparams.n_fft,
+                                   win_length_ms=hparams.win_length_ms,
+                                   hop_length_ms=hparams.hop_length_ms,
+                                   ref_level_db=hparams.ref_level_db,
+                                   _mel_basis=mel_basis,
+                                   pre_emphasis=hparams.preemphasis,
+                                   power=hparams.power,
+                                   debug=True)
+
     return {
         'max_db': debug_info['max_db'],
         'min_db': debug_info['min_db']
@@ -82,13 +92,14 @@ def calibrate_db_file(sr, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_e
 if __name__ == '__main__':
     # Grid search
     sr = 44100
-    num_mel_bins = 64
-    n_fft = 1024
-    mel_lower_edge_hertz = 1000
+    num_mel_bins = None
+    n_fft = 4096
+    mel_lower_edge_hertz = 500
     mel_upper_edge_hertz = 20000
-    hop_length_ms = None
-    win_length_ms = None
+    hop_length_ms = 2
+    win_length_ms = 10
     power = 1.5
+    ref_level_db = 0
 
     dataset_loc = '/home/leo/Code/birds_latent_generation/data/raw/voizo_chunks'
     calibrate_db(
@@ -100,7 +111,6 @@ if __name__ == '__main__':
         hop_length_ms=hop_length_ms,
         win_length_ms=win_length_ms,
         power=power,
-        ref_level_db=-30,
-        min_level_db=-80,
+        ref_level_db=ref_level_db,
         dataset_loc=dataset_loc
     )

@@ -8,8 +8,8 @@ from librosa.core.spectrum import amplitude_to_db
 import numpy as np
 
 from scipy import signal
-from avgn.signalprocessing.spectrogramming_scipy import _amplitude_to_db, _db_to_amplitude, build_mel_basis, build_mel_inversion_basis, \
-    inv_spectrogram_sp, spectrogram_sp
+from avgn.signalprocessing.spectrogramming_scipy import _amplitude_to_db, _db_to_amplitude, build_mel_basis, \
+    build_mel_inversion_basis, inv_spectrogram_sp, spectrogram_sp
 import itertools
 import os
 
@@ -22,7 +22,7 @@ from avgn.utils.paths import DATA_DIR
 
 
 def single_file_test(sr, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz, hop_length_ms, win_length_ms,
-                     power, ref_level_db, min_level_db, wav_loc, index=0):
+                     power, ref_level_db, wav_loc, index=0):
 
     duration_sec = 10
 
@@ -36,7 +36,6 @@ def single_file_test(sr, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_ed
         butter_lowcut=mel_lower_edge_hertz,
         butter_highcut=mel_upper_edge_hertz,
         ref_level_db=ref_level_db,
-        min_level_db=min_level_db,
         mask_spec=False,
         win_length_ms=win_length_ms,
         hop_length_ms=hop_length_ms,
@@ -69,8 +68,16 @@ def single_file_test(sr, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_ed
     plt.matshow(mel_inversion_basis)
     plt.savefig(f'{dump_folder}/mel_inversion_basis.pdf')
     plt.close()
-    _, debug_info = spectrogram_sp(
-        data, hparams, _mel_basis=mel_basis, debug=True)
+    _, debug_info = spectrogram_sp(y=data,
+                                   sr=hparams.sr,
+                                   n_fft=hparams.n_fft,
+                                   win_length_ms=hparams.win_length_ms,
+                                   hop_length_ms=hparams.hop_length_ms,
+                                   ref_level_db=hparams.ref_level_db,
+                                   _mel_basis=mel_basis,
+                                   pre_emphasis=hparams.preemphasis,
+                                   power=hparams.power,
+                                   debug=True)
 
     if debug_info is None:
         print('chunk too short')
@@ -146,15 +153,14 @@ def single_file_test(sr, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_ed
 
 
 def db_test(sr, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz, hop_length_ms, win_length_ms,
-            power, ref_level_db, min_level_db, dataset_loc):
+            power, ref_level_db, dataset_loc):
     wavs = glob.glob(f'{dataset_loc}/*/*/*.wav')
     for index, wav_loc in enumerate(wavs):
         if index >= 3:
             break
         print(wav_loc)
         single_file_test(sr, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz,
-                         hop_length_ms, win_length_ms, power, ref_level_db, min_level_db,
-                         wav_loc, index)
+                         hop_length_ms, win_length_ms, power, ref_level_db, wav_loc, index)
 
 
 if __name__ == '__main__':
@@ -185,7 +191,6 @@ if __name__ == '__main__':
             win_length_ms=win_length_ms,
             power=power,
             ref_level_db=40,  # -20
-            min_level_db=-240,  # -200 - ref_lvl
             dataset_loc=dataset_loc
         )
 
@@ -200,6 +205,5 @@ if __name__ == '__main__':
         #     win_length_ms=win_length_ms,
         #     power=power,
         #     ref_level_db=-25,
-        #     min_level_db=-75,  # -100 - ref_lvl
         #     wav_loc=wav_loc
         # )

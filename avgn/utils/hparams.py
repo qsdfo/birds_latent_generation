@@ -16,7 +16,8 @@ class HParams(object):
                f'chunkLen-{self.chunk_len_ms}_' \
                f'melb-{self.num_mel_bins}_' \
                f'mell-{self.mel_lower_edge_hertz}_' \
-               f'melh-{self.mel_upper_edge_hertz}'
+               f'melh-{self.mel_upper_edge_hertz}_'\
+               f'refDb-{self.ref_level_db}'
 
     def chunk_len_samples(self):
         chunk_len_samples = self.chunk_len_ms * self.sr / 1000
@@ -35,7 +36,6 @@ class HParams(object):
         self.n_fft = 1024
         self.chunk_len_ms = 1000
         self.ref_level_db = -20
-        self.min_level_db = -80
         self.preemphasis = 0.97
         self.num_mel_bins = 64
         self.power = 1
