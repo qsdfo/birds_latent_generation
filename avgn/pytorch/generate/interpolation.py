@@ -74,8 +74,15 @@ def plot_interpolations(model, hparams, dataloader, savepath, num_interpolated_p
         mel_inversion_basis = build_mel_inversion_basis(mel_basis)
         for ind_example in range(num_examples):
             for ind_interp in range(num_interpolated_points):
-                audio = inv_spectrogram_sp(x_interpolation[ind_example, 0, :, :, ind_interp], hparams.sr, hparams,
-                                           mel_inversion_basis=mel_inversion_basis)
+                audio = inv_spectrogram_sp(
+                    x_interpolation[ind_example, 0, :, :, ind_interp],
+                    n_fft=hparams.n_fft,
+                    win_length=hparams.win_length_samples,
+                    hop_length=hparams.hop_length_samples,
+                    ref_level_db=hparams.ref_level_db,
+                    power=hparams.power,
+                    mel_inversion_basis=mel_inversion_basis
+                )
                 if audios is None:
                     audios = np.zeros(
                         (num_examples, num_interpolated_points, len(audio)))

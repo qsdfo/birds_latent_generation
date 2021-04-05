@@ -142,25 +142,24 @@ def main(config,
     plot_reconstruction(model, hparams, gen_dataloader, savepath, custom_data=custom_data)
 
     # Sampling
-    # savepath = f'{model.model_dir}/plots/generations'
-    # if not os.path.isdir(savepath)
-    # :
-    #     os.mkdir(savepath)
-    # plot_generation(model, hparams, num_examples_plot, savepath)
+    savepath = f'{model.model_dir}/plots/generations'
+    if not os.path.isdir(savepath):
+        os.mkdir(savepath)
+    plot_generation(model, hparams, num_examples_plot, savepath)
 
-    # # Linear interpolations
-    # savepath = f'{model.model_dir}/plots/linear_interpolations'
-    # if not os.path.isdir(savepath):
-    #     os.mkdir(savepath)
-    # plot_interpolations(model, hparams, gen_dataloader, savepath, num_interpolated_points=10, method='linear',
-    #                     custom_data=custom_data)
+    # Linear interpolations
+    savepath = f'{model.model_dir}/plots/linear_interpolations'
+    if not os.path.isdir(savepath):
+        os.mkdir(savepath)
+    plot_interpolations(model, hparams, gen_dataloader, savepath, num_interpolated_points=10, method='linear',
+                        custom_data=custom_data)
 
-    # # Constant r interpolations
-    # savepath = f'{model.model_dir}/plots/constant_r_interpolations'
-    # if not os.path.isdir(savepath):
-    #     os.mkdir(savepath)
-    # plot_interpolations(model, hparams, gen_dataloader, savepath,
-    #                     num_interpolated_points=10, method='constant_radius', custom_data=custom_data)
+    # Constant r interpolations
+    savepath = f'{model.model_dir}/plots/constant_r_interpolations'
+    if not os.path.isdir(savepath):
+        os.mkdir(savepath)
+    plot_interpolations(model, hparams, gen_dataloader, savepath,
+                        num_interpolated_points=10, method='constant_radius', custom_data=custom_data)
 
     # TODO
     # Translations
