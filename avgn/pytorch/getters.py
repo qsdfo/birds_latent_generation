@@ -128,7 +128,6 @@ def get_model_and_dataset(config, loading_epoch):
     ##################################################################################
     print('##### Build model')
     encoder_kwargs = config['encoder_kwargs']
-    if
     encoder = Conv_stack(
         n_z=config['n_z'],
         conv_stack=encoder_kwargs['conv_stack'],

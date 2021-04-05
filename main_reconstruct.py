@@ -47,7 +47,7 @@ def single_file_test(sr, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_ed
     )
     suffix = hparams.__repr__()
 
-    dump_folder = DATA_DIR / 'dump' / f'{suffix}'
+    dump_folder = 'dump' / f'{suffix}'
     if not os.path.isdir(dump_folder):
         os.makedirs(dump_folder)
 

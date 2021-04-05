@@ -1,8 +1,7 @@
-import librosa
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 import seaborn as sns
-from avgn.signalprocessing.spectrogramming_scipy import _amplitude_to_db, _normalize, preemphasis, spectrogram_sp, _min_level_db
+from avgn.signalprocessing.spectrogramming_scipy import _amplitude_to_db, _normalize, preemphasis, _min_level_db
 from tqdm import tqdm
 import numpy as np
 from scipy import ndimage, signal
@@ -43,19 +42,19 @@ def contiguous_regions(condition):
 def dynamic_threshold_segmentation(
     vocalization,
     rate,
-    min_level_db_floor=-40,
-    db_delta=5,
-    n_fft=1024,
-    hop_length_ms=1,
-    win_length_ms=5,
-    ref_level_db=20,
-    pre=0.97,
-    silence_threshold=0.05,
-    min_silence_for_spec=0.1,
-    max_vocal_for_spec=1.0,
-    min_syllable_length_s=0.05,
-    spectral_range=None,
-    verbose=False,
+    min_level_db_floor,
+    db_delta,
+    n_fft,
+    hop_length,
+    win_length,
+    ref_level_db,
+    pre,
+    silence_threshold,
+    min_silence_for_spec,
+    max_vocal_for_spec,
+    min_syllable_length_s,
+    spectral_range,
+    verbose,
 ):
     """
     computes a spectrogram from a waveform by iterating through thresholds
@@ -89,8 +88,10 @@ def dynamic_threshold_segmentation(
     envelope_is_good = False
 
     # Don't worry about the name, since _mel_basis was None, this is the spectrogram
-    win_length = n_fft if win_length_ms is None else int(win_length_ms / 1000 * rate)
-    hop_length = win_length // 4 if hop_length_ms is None else int(hop_length_ms / 1000 * rate)
+    if win_length is None:
+        win_length = n_fft
+    if hop_length is None:
+        hop_length = win_length // 4
     overlap_length = win_length - hop_length
     preemphasis_y = preemphasis(x=vocalization, pre_emphasis=pre)
     _, time_bins, S = signal.stft(x=preemphasis_y, fs=rate, window='hann', nperseg=win_length, noverlap=overlap_length,
@@ -139,9 +140,9 @@ def dynamic_threshold_segmentation(
         ########################################
         ########################################
         # print vocal enveloppe
-        plt.plot(vocal_envelope)
-        plt.savefig(f'debug/vocal_enveloppe_{mldb}.pdf')
-        plt.clf()
+        # plt.plot(vocal_envelope)
+        # plt.savefig(f'dump/vocal_enveloppe_{mldb}.pdf')
+        # plt.clf()
         ########################################
         ########################################
 

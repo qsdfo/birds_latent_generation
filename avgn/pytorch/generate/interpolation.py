@@ -1,6 +1,6 @@
 import math
 
-from avgn.signalprocessing.spectrogramming import build_mel_basis, build_mel_inversion_basis, inv_spectrogram_librosa
+from avgn.signalprocessing.spectrogramming_scipy import build_mel_basis, build_mel_inversion_basis, inv_spectrogram_sp
 from avgn.utils.cuda_variable import cuda_variable
 import matplotlib.pyplot as plt
 import numpy as np
@@ -35,7 +35,8 @@ def plot_interpolations(model, hparams, dataloader, savepath, num_interpolated_p
         batch_dim, rgb_dim, h_dim, w_dim = x_cuda.shape
         num_examples = batch_dim
 
-    x_interpolation = np.zeros((num_examples, rgb_dim, h_dim, w_dim, num_interpolated_points))
+    x_interpolation = np.zeros(
+        (num_examples, rgb_dim, h_dim, w_dim, num_interpolated_points))
 
     ind_interp = 0
     for t in np.linspace(start=0, stop=1, num=num_interpolated_points):
@@ -73,12 +74,14 @@ def plot_interpolations(model, hparams, dataloader, savepath, num_interpolated_p
         mel_inversion_basis = build_mel_inversion_basis(mel_basis)
         for ind_example in range(num_examples):
             for ind_interp in range(num_interpolated_points):
-                audio = inv_spectrogram_librosa(x_interpolation[ind_example, 0, :, :, ind_interp], hparams.sr, hparams,
-                                                mel_inversion_basis=mel_inversion_basis)
+                audio = inv_spectrogram_sp(x_interpolation[ind_example, 0, :, :, ind_interp], hparams.sr, hparams,
+                                           mel_inversion_basis=mel_inversion_basis)
                 if audios is None:
-                    audios = np.zeros((num_examples, num_interpolated_points, len(audio)))
+                    audios = np.zeros(
+                        (num_examples, num_interpolated_points, len(audio)))
                 audios[ind_example, ind_interp] = audio
-                sf.write(f'{savepath}/{ind_example}_{ind_interp}.wav', audio, samplerate=hparams.sr)
+                sf.write(f'{savepath}/{ind_example}_{ind_interp}.wav',
+                         audio, samplerate=hparams.sr)
     return {
         'audios': audios,
         'spectros': x_interpolation,

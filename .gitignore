@@ -8,4 +8,4 @@ data
 avgn.egg-info
 .ipynb_checkpoints
 *.pyc
-debug/*
+dump/*

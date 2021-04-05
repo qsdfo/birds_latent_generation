@@ -58,7 +58,7 @@ def calibrate_db_file(sr, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_e
     )
     suffix = hparams.__repr__()
 
-    dump_folder = DATA_DIR / 'dump' / f'{suffix}'
+    dump_folder = 'dump' / f'{suffix}'
     if os.path.isdir(dump_folder):
         shutil.rmtree(dump_folder)
     os.makedirs(dump_folder)
@@ -92,16 +92,16 @@ def calibrate_db_file(sr, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_e
 if __name__ == '__main__':
     # Grid search
     sr = 44100
-    num_mel_bins = None
-    n_fft = 4096
-    mel_lower_edge_hertz = 500
-    mel_upper_edge_hertz = 20000
-    hop_length_ms = 2
-    win_length_ms = 10
+    num_mel_bins = 64
+    n_fft = 1024
+    mel_lower_edge_hertz = 1000
+    mel_upper_edge_hertz = 12000
+    hop_length_ms = None
+    win_length_ms = None
     power = 1.5
     ref_level_db = 0
-
     dataset_loc = '/home/leo/Code/birds_latent_generation/data/raw/voizo_chunks'
+
     calibrate_db(
         sr=sr,
         num_mel_bins=num_mel_bins,

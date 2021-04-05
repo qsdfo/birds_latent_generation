@@ -1,5 +1,5 @@
 import torch
-from avgn.signalprocessing.spectrogramming import build_mel_basis, build_mel_inversion_basis, inv_spectrogram_librosa
+from avgn.signalprocessing.spectrogramming_scipy import build_mel_basis, build_mel_inversion_basis, inv_spectrogram_sp
 from avgn.utils.cuda_variable import cuda_variable
 import matplotlib.pyplot as plt
 import soundfile as sf
@@ -40,10 +40,17 @@ def plot_reconstruction(model, hparams, dataloader, savepath, custom_data):
         mel_basis = build_mel_basis(hparams, hparams.sr, hparams.sr)
         mel_inversion_basis = build_mel_inversion_basis(mel_basis)
         for i in range(num_examples):
-            original_audio = inv_spectrogram_librosa(x_orig[i, 0], hparams.sr, hparams,
-                                                     mel_inversion_basis=mel_inversion_basis)
-            recon_audio = inv_spectrogram_librosa(x_recon[i, 0], hparams.sr, hparams,
-                                                  mel_inversion_basis=mel_inversion_basis)
+            original_audio = inv_spectrogram_sp(x_orig[i, 0], n_fft=hparams.n_fft,
+                                                win_length=hparams.win_length_samples,
+                                                hop_length=hparams.hop_length_samples,
+                                                ref_level_db=hparams.ref_level_db, power=hparams.power,
+                                                mel_inversion_basis=mel_inversion_basis)
+            recon_audio = inv_spectrogram_sp(x_recon[i, 0], n_fft=hparams.n_fft,
+                                             win_length=hparams.win_length_samples,
+                                             hop_length=hparams.hop_length_samples,
+                                             ref_level_db=hparams.ref_level_db, power=hparams.power,
+                                             mel_inversion_basis=mel_inversion_basis)
+
             sf.write(f'{savepath}/{i}_original.wav',
                      original_audio, samplerate=hparams.sr)
             sf.write(f'{savepath}/{i}_recon.wav',

@@ -27,7 +27,7 @@ class SpectroDataset(Dataset):
         fname = self.syllable_paths[idx]
         with open(fname, 'rb') as ff:
             data = pickle.load(ff)
-        mSp = data['mSp']
+        mSp = data['mS_int']
         # conv in pytorch are
         # (batch, channel, height, width)
         sample = SpectroDataset.process_mSp(mSp)

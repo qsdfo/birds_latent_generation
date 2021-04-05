@@ -1,6 +1,6 @@
 import numpy as np
 from avgn.pytorch.dataset.spectro_dataset import SpectroDataset
-from avgn.signalprocessing.spectrogramming import build_mel_basis
+from avgn.signalprocessing.spectrogramming_scipy import build_mel_basis
 from avgn.signalprocessing.create_spectrogram_dataset import prepare_wav
 from main_spectrogramming import process_syllable
 import os
@@ -8,7 +8,6 @@ import shutil
 
 import click
 from torch.utils.tensorboard import SummaryWriter
-
 from avgn.pytorch.generate.generation import plot_generation
 from avgn.pytorch.generate.interpolation import plot_interpolations
 from avgn.pytorch.generate.reconstruction import plot_reconstruction
@@ -83,7 +82,7 @@ def main(config,
 
     # Generations
     print('##### Generate')
-    USE_CUSTOM_SAMPLE = True
+    USE_CUSTOM_SAMPLE = False
     # Use own samples for generation
     if USE_CUSTOM_SAMPLE:
         data_source = {

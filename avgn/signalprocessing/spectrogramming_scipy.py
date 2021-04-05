@@ -3,9 +3,11 @@ import numpy as np
 from scipy import signal
 
 
-def spectrogram_sp(y, sr, n_fft, win_length_ms, hop_length_ms, ref_level_db, _mel_basis, pre_emphasis, power, debug):
-    win_length = n_fft if win_length_ms is None else int(win_length_ms / 1000 * sr)
-    hop_length = win_length // 4 if hop_length_ms is None else int(hop_length_ms / 1000 * sr)
+def spectrogram_sp(y, sr, n_fft, win_length, hop_length, ref_level_db, _mel_basis, pre_emphasis, power, debug):
+    if win_length is None:
+        win_length = n_fft
+    if hop_length is None:
+        hop_length = win_length // 4
     overlap_length = win_length - hop_length
     # preprocessing cleaning
     # low-pass filtering to remove noise
@@ -28,7 +30,8 @@ def spectrogram_sp(y, sr, n_fft, win_length_ms, hop_length_ms, ref_level_db, _me
     Sdb_unref = _amplitude_to_db(A)
     max_db = Sdb_unref.max()
     min_db = Sdb_unref.min()
-    Sdb_norm = _normalize(Sdb_unref, min_db=_min_level_db(), max_db=ref_level_db)
+    Sdb_norm = _normalize(
+        Sdb_unref, min_db=_min_level_db(), max_db=ref_level_db)
     if debug:
         debug_info = {
             'preemphasis_y': preemphasis_y,
@@ -45,37 +48,33 @@ def spectrogram_sp(y, sr, n_fft, win_length_ms, hop_length_ms, ref_level_db, _me
     return Sdb_norm, debug_info
 
 
-def griffinlim_sp(spectrogram, fs, hparams):
-    win_length = hparams.n_fft if hparams.win_length_ms is None else int(
-        hparams.win_length_ms / 1000 * hparams.sr)
-    hop_length = win_length // 4 if hparams.hop_length_ms is None else int(
-        hparams.hop_length_ms / 1000 * hparams.sr)
-    # overlap_length = win_length - hop_length
-    # t, s = signal.istft(spectrogram, fs=fs, window='hann', nperseg=win_length, noverlap=overlap_length,
-    #                     nfft=None, input_onesided=True, boundary=True, time_axis=-1, freq_axis=-2)
-    # return s / np.max(np.abs(s))
+def griffinlim_sp(spectrogram, n_fft, win_length, hop_length):
+    if win_length is None:
+        win_length = n_fft
+    if hop_length is None:
+        hop_length = win_length // 4
     s = librosa.griffinlim(
         spectrogram,
         n_iter=50,
         hop_length=hop_length,
         win_length=win_length,
         momentum=0.5,
-        # momentum=0.99
     )
     return s / np.max(np.abs(s))
 
 
-def inv_spectrogram_sp(spectrogram, fs, hparams, mel_inversion_basis=None):
+def inv_spectrogram_sp(spectrogram, n_fft, win_length, hop_length, ref_level_db, power, mel_inversion_basis):
     """Converts spectrogram to waveform using librosa"""
-    s_unnorm = _denormalize(spectrogram, hparams)
-    s_amplitude = _db_to_amplitude(s_unnorm + hparams.ref_level_db)
+    s_unnorm = _denormalize(
+        spectrogram, min_db=_min_level_db(), max_db=ref_level_db)
+    s_amplitude = _db_to_amplitude(s_unnorm + ref_level_db)
     if mel_inversion_basis is not None:
         s_linear = _mel_to_linear(
-            s_amplitude, _mel_inverse_basis=mel_inversion_basis)**(1 / hparams.power)
+            s_amplitude, _mel_inverse_basis=mel_inversion_basis)**(1 / power)
         # s_linear = _mel_to_linear(s_amplitude, _mel_inverse_basis=mel_inversion_basis)
     else:
         s_linear = s_amplitude
-    return griffinlim_sp(s_linear, fs, hparams)
+    return griffinlim_sp(s_linear, n_fft=n_fft, win_length=win_length, hop_length=hop_length)
 
 
 def preemphasis(x, pre_emphasis):
@@ -119,6 +118,7 @@ def build_mel_basis(hparams, fs, rate=None, use_n_fft=True):
     )
     # Normalise contribution of mel coeff to 1 for 1 output bin
     return (_mel_basis.T / np.sum(_mel_basis + _epsilon(), axis=1)).T
+
 
 def _normalize(S, min_db, max_db):
     return np.clip((S - min_db) / (max_db - min_db), 0, 1)
