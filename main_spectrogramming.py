@@ -60,9 +60,9 @@ def main(debug, sr, num_mel_bins, n_fft, chunk_len, mel_lower_edge_hertz, mel_up
     # DATASET_ID = 'Bird_all'
     # DATASET_ID = 'Test'
     # DATASET_ID = 'voizo_all'
-    # DATASET_ID = 'voizo_all_test'
-    DATASET_ID = 'voizo_chunks_test_segmented'
-    ind_examples = [20, 40, 50, 60, 80, 100]
+    DATASET_ID = 'voizo_all_segmented'
+    # DATASET_ID = 'voizo_chunks_test_segmented'
+    ind_examples = [200, 400, 500, 600, 800, 1000, 1200, 1400, 1600, 1800]
 
     # STFT time parameters
     if win_length_ms is None:

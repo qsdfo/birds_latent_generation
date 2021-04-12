@@ -26,9 +26,10 @@ class HParams(object):
         self.verbosity = kwargs['verbosity']  # 1
         # training chunks
         self.chunk_len_samples = kwargs['chunk_len_samples']
-        self.chunk_len_win = int((self.chunk_len_samples - self.win_length_samples) / self.hop_length_samples + 1)
-        self.chunk_len_ms = sample_to_ms(self.chunk_len_samples, self.sr)
-        assert self.chunk_len_win == ((self.chunk_len_samples - self.win_length_samples) / self.hop_length_samples + 1)
+        if self.chunk_len_samples is not None:
+            self.chunk_len_win = int((self.chunk_len_samples - self.win_length_samples) / self.hop_length_samples + 1)
+            self.chunk_len_ms = sample_to_ms(self.chunk_len_samples, self.sr)
+            assert self.chunk_len_win == ((self.chunk_len_samples - self.win_length_samples) / self.hop_length_samples + 1)
 
     def __repr__(self):
         return f'sr-{self.sr}_' \

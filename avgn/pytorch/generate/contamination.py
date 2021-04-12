@@ -152,10 +152,10 @@ def get_chunks(path, hparams):
 
 
 if __name__ == '__main__':
-
     config_path = "models/VAE_voizo_2021-04-05_15-31-14/config.py"
     loading_epoch = 40
-    source_path = '/home/leo/Code/birds_latent_generation/data/raw/voizo_chunks/Nigthingale/XCcommonNightingale-Denoised/Nightingale1_0_0.wav'
+    source_path = '/home/leo/Code/birds_latent_generation/data' \
+        '/raw/voizo_chunks/Nigthingale/XCcommonNightingale-Denoised/Nightingale1_0_0.wav'
     contamination_path = '/home/leo/Code/birds_latent_generation/data'\
         '/raw/voizo_chunks/Corvus/XCcorvus-Denoised/Kraai_BieslNp_120312-07xc_0_0.wav'
     contamination_parameters = {
