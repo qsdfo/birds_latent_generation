@@ -5,23 +5,25 @@ from torch import nn
 # Spectros
 sr = 44100
 num_mel_bins = 64
+# num_mel_bins = 32
 time_dim = 256
 win_length = 512
 hop_length = 128
 n_fft = 512
 chunkls = 33152
 mel_lower_edge_hertz = 500
-mel_upper_edge_hertz = 7900
+mel_upper_edge_hertz = 16000
 
 #  Model
-n_z = 32
+n_z = 16
 deconv_input_shape = (64, 7, 15)  # (num_channel, x_dim_latent, y_dim_latent)
+# deconv_input_shape = (64, 3, 15)  # (num_channel, x_dim_latent, y_dim_latent)
 h_dim = num_mel_bins
 w_dim = time_dim
 
 config = {
     # --- Dataset ---
-    'dataset': 'voizo_all_segmented',
+    'dataset': 'voizo_chunks_test_segmented',
     'dataset_preprocessing': f'sr-{sr}_' \
                              f'wl-{win_length}_' \
                              f'hl-{hop_length}_' \
@@ -62,6 +64,7 @@ config = {
             nn.ReLU(),
             nn.Dropout(p=0.1),
         ],
+        # Deconv stack for 64 mel bands
         deconv_stack=[  # (b, 64, 7, 15)
             nn.ConvTranspose2d(deconv_input_shape[0], 64, (2, 2), stride=(2, 2)),  # (b, 64, 14, 30)
             nn.ConvTranspose2d(64, 64, (4, 4), stride=(2, 2), output_padding=1),  # (, , 31, 63)
@@ -69,6 +72,14 @@ config = {
             nn.ConvTranspose2d(64, 64, (1, 2), stride=(1, 2)),  # (, , 64, 256)
             nn.ConvTranspose2d(64, 1, (1, 1), stride=(1, 1))
         ]
+        # Deconv stack for 32 mel bands
+        # deconv_stack=[  # (b, 64, 3, 15)
+        #     nn.ConvTranspose2d(deconv_input_shape[0], 64, (2, 2), stride=(2, 2)),  # (b, 64, 6, 30)
+        #     nn.ConvTranspose2d(64, 64, (4, 4), stride=(2, 2), output_padding=1),  # (, , 15, 63)
+        #     nn.ConvTranspose2d(64, 64, (4, 4), stride=(2, 2)),  # (, , 32, 128)
+        #     nn.ConvTranspose2d(64, 64, (1, 2), stride=(1, 2)),  # (, , 32, 256)
+        #     nn.ConvTranspose2d(64, 1, (1, 1), stride=(1, 1))
+        # ]
     ),
     'model_kwargs': dict(
         beta=1.0

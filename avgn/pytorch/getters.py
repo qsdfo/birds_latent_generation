@@ -118,8 +118,8 @@ def get_model_and_dataset(config, loading_epoch):
             dataset_train = SingDataset(syllable_paths_train)
             dataset_val = SingDataset(syllable_paths_val)
         elif config['model_type'] == 'VAE':
-            dataset_train = SpectroDataset(syllable_paths_train)
-            dataset_val = SpectroDataset(syllable_paths_val)
+            dataset_train = SpectroDataset(syllable_paths_train, hparams, data_augmentations=True)
+            dataset_val = SpectroDataset(syllable_paths_val, hparams, data_augmentations=False)
             # dataset_train = SpectroCategoricalDataset(syllable_df_train)
             # dataset_val = SpectroCategoricalDataset(syllable_df_val)
         else:

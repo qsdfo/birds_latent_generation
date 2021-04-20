@@ -26,8 +26,8 @@ def main():
     Need careful tweaking of these five parameters to find the optimal automatic segmentation...
     """
     # DATASET_ID = 'voizo_chunks_Nigthingale'
-    DATASET_ID = 'voizo_chunks_Corvus'
-    # DATASET_ID = 'voizo_chunks_test'
+    # DATASET_ID = 'voizo_chunks_Corvus'
+    DATASET_ID = 'voizo_chunks_test'
     # create a unique datetime identifier
     DT_ID = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
@@ -51,7 +51,7 @@ def main():
     silence_threshold = 0.01
     min_silence_for_spec = 0.05
     max_vocal_for_spec = 1.0,
-    min_syllable_length_s = 0.05
+    min_syllable_length_s = 0.1
     spectral_range = [mel_lower_edge_hertz,
                       mel_upper_edge_hertz]
 

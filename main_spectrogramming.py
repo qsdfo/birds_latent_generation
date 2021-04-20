@@ -1,4 +1,4 @@
-from avgn.utils.seconds_to_samples import ms_to_sample, sample_to_ms
+from avgn.utils.seconds_to_samples import ms_to_sample
 from avgn.utils.paths import DATA_DIR
 from avgn.utils.hparams import HParams
 from avgn.utils.audio import int16_to_float32
@@ -12,12 +12,10 @@ import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from tqdm import tqdm
-import math
 
 from avgn.dataset import DataSet
 from avgn.signalprocessing.create_spectrogram_dataset import create_label_df, prepare_wav
-from avgn.signalprocessing.spectrogramming_scipy import build_mel_basis, build_mel_inversion_basis, spectrogram_sp, \
-    inv_spectrogram_sp
+from avgn.signalprocessing.spectrogramming_scipy import build_mel_basis
 
 
 def process_syllable(syl, hparams, mel_basis, debug):
@@ -30,40 +28,33 @@ def process_syllable(syl, hparams, mel_basis, debug):
     # If too long skip, else pad
     if syl_len > hparams.chunk_len_samples:
         return None, None, None
-    else:
-        syl_pad = np.zeros((hparams.chunk_len_samples))
-        syl_pad[:syl_len] = syl
+    # else:
+    #     syl_pad = np.zeros((hparams.chunk_len_samples))
+    #     pad_side_left = (hparams.chunk_len_samples - syl_len) // 2
+    #     syl_pad[pad_side_left:(pad_side_left + syl_len)] = syl
     # Normalise
-    sn = syl_pad / np.max(syl_pad)
+    sn = syl / np.max(syl)
     # convert to float
     if type(sn[0]) == int:
         sn = int16_to_float32(sn)
-    # create spec
-    mS, debug_info = spectrogram_sp(y=sn,
-                                    sr=hparams.sr,
-                                    n_fft=hparams.n_fft,
-                                    win_length=hparams.win_length_samples,
-                                    hop_length=hparams.hop_length_samples,
-                                    ref_level_db=hparams.ref_level_db,
-                                    _mel_basis=mel_basis,
-                                    pre_emphasis=hparams.preemphasis,
-                                    power=hparams.power,
-                                    debug=debug
-                                    )
+    # # create spec
+    # mS, debug_info = spectrogram_sp(y=sn,
+    #                                 sr=hparams.sr,
+    #                                 n_fft=hparams.n_fft,
+    #                                 win_length=hparams.win_length_samples,
+    #                                 hop_length=hparams.hop_length_samples,
+    #                                 ref_level_db=hparams.ref_level_db,
+    #                                 _mel_basis=mel_basis,
+    #                                 pre_emphasis=hparams.preemphasis,
+    #                                 power=hparams.power,
+    #                                 debug=debug
+    #                                 )
+    # return sn, mS, debug_info
+    return sn
 
-    return sn, mS, debug_info
 
-
-def main(debug, sr, num_mel_bins, n_fft, chunk_len, mel_lower_edge_hertz, mel_upper_edge_hertz,
+def main(dataset_id, debug, sr, num_mel_bins, n_fft, chunk_len, mel_lower_edge_hertz, mel_upper_edge_hertz,
          hop_length_ms, win_length_ms, ref_level_db, power):
-    # DATASET_ID = 'BIRD_DB_CATH'
-    # DATASET_ID = 'Bird_all'
-    # DATASET_ID = 'Test'
-    # DATASET_ID = 'voizo_all'
-    DATASET_ID = 'voizo_all_segmented'
-    # DATASET_ID = 'voizo_chunks_test_segmented'
-    ind_examples = [200, 400, 500, 600, 800, 1000, 1200, 1400, 1600, 1800]
-
     # STFT time parameters
     if win_length_ms is None:
         win_length = n_fft
@@ -126,7 +117,7 @@ def main(debug, sr, num_mel_bins, n_fft, chunk_len, mel_lower_edge_hertz, mel_up
     else:
         dump_folder = None
 
-    dataset = DataSet(DATASET_ID, hparams=hparams)
+    dataset = DataSet(dataset_id, hparams=hparams)
     print(f'Number files: {len(dataset.data_files)}')
 
     ################################################################################
@@ -149,9 +140,8 @@ def main(debug, sr, num_mel_bins, n_fft, chunk_len, mel_lower_edge_hertz, mel_up
     ################################################################################
     print('Get audio for dataset')
     mel_basis = build_mel_basis(hparams, hparams.sr, hparams.sr)
-    mel_inversion_basis = build_mel_inversion_basis(mel_basis)
     counter = 0
-    save_loc = DATA_DIR / 'syllables' / f'{DATASET_ID}_{suffix}'
+    save_loc = DATA_DIR / 'syllables' / f'{dataset_id}_{suffix}'
     if os.path.isdir(save_loc):
         raise Exception('already exists')
     os.makedirs(save_loc)
@@ -166,15 +156,16 @@ def main(debug, sr, num_mel_bins, n_fft, chunk_len, mel_lower_edge_hertz, mel_up
         # process each syllable
         for syll_ind, (st, et) in enumerate(zip(this_syllable_df.start_time.values, this_syllable_df.end_time.values)):
             s = data[int(st * hparams.sr): int(et * hparams.sr)]
-            sn, mS, debug_info = process_syllable(
-                syl=s, hparams=hparams, mel_basis=mel_basis, debug=debug)
+            # sn, mS, debug_info = process_syllable(
+            #     syl=s, hparams=hparams, mel_basis=mel_basis, debug=debug)
+            sn = process_syllable(syl=s, hparams=hparams, mel_basis=mel_basis, debug=debug)
             if sn is None:
                 skipped_counter += 1
                 continue
             # Save as uint to save space
-            mS_int = (mS * 255).astype('uint8')
+            # mS_int = (mS * 255).astype('uint8')
             save_dict = {
-                'mS_int': mS_int,
+                # 'mS_int': mS_int,
                 'sn': sn,
                 'indv': this_syllable_df.indv[syll_ind],
                 'label': this_syllable_df.species[syll_ind]
@@ -183,25 +174,6 @@ def main(debug, sr, num_mel_bins, n_fft, chunk_len, mel_lower_edge_hertz, mel_up
             with open(fname, 'wb') as ff:
                 pkl.dump(save_dict, ff)
             counter += 1
-
-            if debug and (counter in ind_examples):
-                # normalised audio
-                sf.write(f'{dump_folder}/{counter}_sn.wav',
-                         sn, samplerate=hparams.sr)
-                #  Padded mel db norm spectro
-                plt.clf()
-                plt.matshow(mS, origin="lower")
-                plt.savefig(f'{dump_folder}/{counter}_mS.pdf')
-                plt.close()
-                audio_reconstruct = inv_spectrogram_sp(mS, n_fft=hparams.n_fft,
-                                                       win_length=hparams.win_length_samples,
-                                                       hop_length=hparams.hop_length_samples,
-                                                       ref_level_db=hparams.ref_level_db,
-                                                       power=hparams.power,
-                                                       mel_inversion_basis=mel_inversion_basis)
-                sf.write(f'{dump_folder}/{counter}_mS.wav',
-                         audio_reconstruct, samplerate=hparams.sr)
-
     print(f'Skipped counter: {skipped_counter}')
     #  Save hparams
     print("Save hparams")
@@ -217,6 +189,13 @@ def main(debug, sr, num_mel_bins, n_fft, chunk_len, mel_lower_edge_hertz, mel_up
 
 
 if __name__ == '__main__':
+    # DATASET_ID = 'BIRD_DB_CATH'
+    # DATASET_ID = 'Bird_all'
+    # DATASET_ID = 'Test'
+    # DATASET_ID = 'voizo_all'
+    # DATASET_ID = 'voizo_all_segmented'
+    DATASET_ID = 'voizo_chunks_test_segmented'
+
     # Grid search
     debug = True
     # sr: 44100 for spec-based models, 16000 for sample-based models
@@ -227,7 +206,7 @@ if __name__ == '__main__':
     # lowest freq = sr / n_fft does not need to be lower
     # than mel_lower_eddge + gain temporal resolution, but increases number of frames in th STFT.... tradeoff!!
     mel_lower_edge_hertz_l = [500]
-    mel_upper_edge_hertz_l = [7900]
+    mel_upper_edge_hertz_l = [16000]
     hop_length_ms_l = [None]
     win_length_ms_l = [None]
     power_l = [1.5]
@@ -246,7 +225,8 @@ if __name__ == '__main__':
         win_length_ms, ref_level_db, power in \
             itertools.product(sr_l, num_mel_bins_l, n_fft_l, mel_lower_edge_hertz_l, mel_upper_edge_hertz_l,
                               hop_length_ms_l, win_length_ms_l, ref_level_db_l, power_l):
-        main(debug=debug,
+        main(dataset_id=DATASET_ID,
+             debug=debug,
              sr=sr,
              num_mel_bins=num_mel_bins,
              n_fft=n_fft,
