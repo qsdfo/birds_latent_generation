@@ -1,24 +1,20 @@
 from avgn.utils.seconds_to_samples import ms_to_sample
 from avgn.utils.paths import DATA_DIR
-from avgn.utils.hparams import HParams
 from avgn.utils.audio import int16_to_float32
 import itertools
 import os
 import pickle as pkl
 import shutil
 import soundfile as sf
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from tqdm import tqdm
-
 from avgn.dataset import DataSet
 from avgn.signalprocessing.create_spectrogram_dataset import create_label_df, prepare_wav
-from avgn.signalprocessing.spectrogramming_scipy import build_mel_basis
 
 
-def process_syllable(syl, hparams, mel_basis, debug):
+def process_syllable(syl, chunk_len_samples):
     # Skip silences
     syl_len = len(syl)
     if syl_len == 0:
@@ -26,98 +22,58 @@ def process_syllable(syl, hparams, mel_basis, debug):
     if np.max(syl) == 0:
         return None, None, None
     # If too long skip, else pad
-    if syl_len > hparams.chunk_len_samples:
+    if syl_len > chunk_len_samples:
         return None, None, None
-    # else:
-    #     syl_pad = np.zeros((hparams.chunk_len_samples))
-    #     pad_side_left = (hparams.chunk_len_samples - syl_len) // 2
-    #     syl_pad[pad_side_left:(pad_side_left + syl_len)] = syl
     # Normalise
     sn = syl / np.max(syl)
     # convert to float
     if type(sn[0]) == int:
         sn = int16_to_float32(sn)
-    # # create spec
-    # mS, debug_info = spectrogram_sp(y=sn,
-    #                                 sr=hparams.sr,
-    #                                 n_fft=hparams.n_fft,
-    #                                 win_length=hparams.win_length_samples,
-    #                                 hop_length=hparams.hop_length_samples,
-    #                                 ref_level_db=hparams.ref_level_db,
-    #                                 _mel_basis=mel_basis,
-    #                                 pre_emphasis=hparams.preemphasis,
-    #                                 power=hparams.power,
-    #                                 debug=debug
-    #                                 )
-    # return sn, mS, debug_info
     return sn
 
 
-def main(dataset_id, debug, sr, num_mel_bins, n_fft, chunk_len, mel_lower_edge_hertz, mel_upper_edge_hertz,
-         hop_length_ms, win_length_ms, ref_level_db, power):
-    # STFT time parameters
-    if win_length_ms is None:
-        win_length = n_fft
-    else:
-        win_length = ms_to_sample(win_length_ms, sr)
-    if hop_length_ms is None:
-        hop_length = win_length // 4
-    else:
-        hop_length = ms_to_sample(hop_length_ms, sr)
+def main(dataset_id, sr, chunk_len_max_ms, locut, hicut):
+    # # STFT time parameters
+    # if win_length_ms is None:
+    #     win_length = n_fft
+    # else:
+    #     win_length = ms_to_sample(win_length_ms, sr)
+    # if hop_length_ms is None:
+    #     hop_length = win_length // 4
+    # else:
+    #     hop_length = ms_to_sample(hop_length_ms, sr)
+
+    # ################################################################################
+    # if chunk_len['type'] == 'ms':
+    #     chunk_len_ms = chunk_len['value']
+    #     chunk_len_samples_not_rounded = ms_to_sample(chunk_len_ms, sr)
+    #     chunk_len_win = round(
+    #         (chunk_len_samples_not_rounded - win_length) / hop_length) + 1
+    #     chunk_len_samples = (chunk_len_win - 1) * hop_length + win_length
+    # elif chunk_len['type'] == 'samples':
+    #     chunk_len_samples_not_rounded = chunk_len['value']
+    #     chunk_len_win = round(
+    #         (chunk_len_samples_not_rounded - win_length) / hop_length) + 1
+    #     chunk_len_samples = (chunk_len_win - 1) * hop_length + win_length
+    # elif chunk_len['type'] == 'stft_win':
+    #     chunk_len_win = chunk_len['value']
+    #     chunk_len_samples = (chunk_len_win - 1) * hop_length + win_length
+    # ################################################################################
+    # print('Chunk length is automatically set to match STFT windows/hop sizes')
+    # print(
+    #     f'STFT win length: {win_length} samples, {1000 * win_length / sr} ms')
+    # print(f'STFT hop length: {hop_length} samples, {1000* hop_length / sr} ms')
+    # print(
+    #     f'Chunk length: {chunk_len_samples} samples, {chunk_len_win} win, {chunk_len_samples * 1000 / sr} ms')
 
     ################################################################################
-    if chunk_len['type'] == 'ms':
-        chunk_len_ms = chunk_len['value']
-        chunk_len_samples_not_rounded = ms_to_sample(chunk_len_ms, sr)
-        chunk_len_win = round((chunk_len_samples_not_rounded - win_length) / hop_length) + 1
-        chunk_len_samples = (chunk_len_win - 1) * hop_length + win_length
-    elif chunk_len['type'] == 'samples':
-        chunk_len_samples_not_rounded = chunk_len['value']
-        chunk_len_win = round((chunk_len_samples_not_rounded - win_length) / hop_length) + 1
-        chunk_len_samples = (chunk_len_win - 1) * hop_length + win_length
-    elif chunk_len['type'] == 'stft_win':
-        chunk_len_win = chunk_len['value']
-        chunk_len_samples = (chunk_len_win - 1) * hop_length + win_length
-    ################################################################################
-    print('Chunk length is automatically set to match STFT windows/hop sizes')
-    print(f'STFT win length: {win_length} samples, {1000 * win_length / sr} ms')
-    print(f'STFT hop length: {hop_length} samples, {1000* hop_length / sr} ms')
-    print(f'Chunk length: {chunk_len_samples} samples, {chunk_len_win} win, {chunk_len_samples * 1000 / sr} ms')
-
-    ################################################################################
+    chunk_len_samples = ms_to_sample(chunk_len_max_ms, sr)
     print('Create dataset')
-    hparams = HParams(
-        sr=sr,
-        num_mel_bins=num_mel_bins,
-        n_fft=n_fft,
-        chunk_len_samples=chunk_len_samples,
-        mel_lower_edge_hertz=mel_lower_edge_hertz,
-        mel_upper_edge_hertz=mel_upper_edge_hertz,
-        power=power,  # for spectral inversion
-        butter_lowcut=mel_lower_edge_hertz,
-        butter_highcut=mel_upper_edge_hertz,
-        ref_level_db=ref_level_db,
-        preemphasis=0.97,
-        mask_spec=False,
-        win_length_samples=win_length,
-        hop_length_samples=hop_length,
-        mask_spec_kwargs={"spec_thresh": 0.9, "offset": 1e-10},
-        reduce_noise=True,
-        noise_reduce_kwargs={"n_std_thresh": 2.0, "prop_decrease": 0.8},
-        n_jobs=1,
-        verbosity=1,
-    )
-    suffix = hparams.__repr__()
-
-    if debug:
-        dump_folder = f'dump/{suffix}'
-        if os.path.isdir(dump_folder):
-            shutil.rmtree(dump_folder)
-        os.makedirs(dump_folder)
-    else:
-        dump_folder = None
-
-    dataset = DataSet(dataset_id, hparams=hparams)
+    suffix = f'sr-{sr}_' +\
+        f'chunklmaxs-{chunk_len_samples}_' +\
+        f'locut-{locut}_' +\
+        f'hicut-{hicut}'
+    dataset = DataSet(dataset_id)
     print(f'Number files: {len(dataset.data_files)}')
 
     ################################################################################
@@ -127,7 +83,6 @@ def main(dataset_id, debug, sr, num_mel_bins, n_fft, chunk_len, mel_lower_edge_h
         syllable_dfs = parallel(
             delayed(create_label_df)(
                 dataset.data_files[key].data,
-                hparams=dataset.hparams,
                 labels_to_retain=[],
                 unit="syllables",
                 dict_features_to_retain=['species'],
@@ -139,7 +94,6 @@ def main(dataset_id, debug, sr, num_mel_bins, n_fft, chunk_len, mel_lower_edge_h
 
     ################################################################################
     print('Get audio for dataset')
-    mel_basis = build_mel_basis(hparams, hparams.sr, hparams.sr)
     counter = 0
     save_loc = DATA_DIR / 'syllables' / f'{dataset_id}_{suffix}'
     if os.path.isdir(save_loc):
@@ -151,21 +105,21 @@ def main(dataset_id, debug, sr, num_mel_bins, n_fft, chunk_len, mel_lower_edge_h
         this_syllable_df = syllable_df[syllable_df.key == key]
         wav_loc = dataset.data_files[key].data['wav_loc']
         print(f'{wav_loc}')
-        data, _ = prepare_wav(wav_loc, hparams, debug=debug)
+        data = prepare_wav(wav_loc, sr,
+                           locut=locut,
+                           hicut=hicut,
+                           noise_reduce_kwargs={
+                               "n_std_thresh": 2.0, "prop_decrease": 0.8}
+                           )
         data = data.astype('float32')
         # process each syllable
         for syll_ind, (st, et) in enumerate(zip(this_syllable_df.start_time.values, this_syllable_df.end_time.values)):
-            s = data[int(st * hparams.sr): int(et * hparams.sr)]
-            # sn, mS, debug_info = process_syllable(
-            #     syl=s, hparams=hparams, mel_basis=mel_basis, debug=debug)
-            sn = process_syllable(syl=s, hparams=hparams, mel_basis=mel_basis, debug=debug)
+            s = data[int(st * sr): int(et * sr)]
+            sn = process_syllable(syl=s, chunk_len_samples=chunk_len_samples)
             if sn is None:
                 skipped_counter += 1
                 continue
-            # Save as uint to save space
-            # mS_int = (mS * 255).astype('uint8')
             save_dict = {
-                # 'mS_int': mS_int,
                 'sn': sn,
                 'indv': this_syllable_df.indv[syll_ind],
                 'label': this_syllable_df.species[syll_ind]
@@ -175,67 +129,48 @@ def main(dataset_id, debug, sr, num_mel_bins, n_fft, chunk_len, mel_lower_edge_h
                 pkl.dump(save_dict, ff)
             counter += 1
     print(f'Skipped counter: {skipped_counter}')
-    #  Save hparams
-    print("Save hparams")
-    hparams_loc = f'{save_loc}_hparams.pkl'
-    with open(hparams_loc, 'wb') as ff:
-        pkl.dump(hparams, ff)
-    # Print hparams
-    print("Print hparams")
-    hparams_loc = f'{save_loc}_hparams.txt'
-    with open(hparams_loc, 'w') as ff:
-        for k, v in hparams.__dict__.items():
-            ff.write(f'{k}: {v}\n')
-
 
 if __name__ == '__main__':
-    # DATASET_ID = 'BIRD_DB_CATH'
-    # DATASET_ID = 'Bird_all'
-    # DATASET_ID = 'Test'
-    # DATASET_ID = 'voizo_all'
-    # DATASET_ID = 'voizo_all_segmented'
-    DATASET_ID = 'voizo_chunks_test_segmented'
+    # dataset_id = 'BIRD_DB_CATH'
+    # dataset_id = 'Bird_all'
+    # dataset_id = 'Test'
+    # dataset_id = 'voizo_all'
+    # dataset_id = 'voizo_all_segmented'
+    dataset_id = 'voizo_chunks_test_segmented'
 
-    # Grid search
-    debug = True
-    # sr: 44100 for spec-based models, 16000 for sample-based models
-    sr_l = [44100]
-    num_mel_bins_l = [64]
-    # there is not much low frequencies, probably a relatively small value is better for better temporal resolution
-    n_fft_l = [512]  # 512, but if sr is 16k, we can use a smaller n_fft like 128
-    # lowest freq = sr / n_fft does not need to be lower
-    # than mel_lower_eddge + gain temporal resolution, but increases number of frames in th STFT.... tradeoff!!
-    mel_lower_edge_hertz_l = [500]
-    mel_upper_edge_hertz_l = [16000]
-    hop_length_ms_l = [None]
-    win_length_ms_l = [None]
-    power_l = [1.5]
-    ref_level_db_l = [-35]
-    # Chunk length can be set either in ms, samples or stft_win
+    # sr_l = [44100]
+    # num_mel_bins_l = [64]
+    # # there is not much low frequencies, probably a relatively small value is better for better temporal resolution
+    # # 512, but if sr is 16k, we can use a smaller n_fft like 128
+    # n_fft_l = [512]
+    # # lowest freq = sr / n_fft does not need to be lower
+    # # than mel_lower_eddge + gain temporal resolution, but increases number of frames in th STFT.... tradeoff!!
+    # mel_lower_edge_hertz_l = [500]
+    # mel_upper_edge_hertz_l = [16000]
+    # hop_length_ms_l = [None]
+    # win_length_ms_l = [None]
+    # power_l = [1.5]
+    # ref_level_db_l = [-35]
+    # # Chunk length can be set either in ms, samples or stft_win
+    # # chunk_len = {
+    # #     'type': 'ms',
+    # #     'value': 1000
+    # # }
+    #     preemphasis=0.97,
+    #     mask_spec=False,
+    #     mask_spec_kwargs={"spec_thresh": 0.9, "offset": 1e-10},
+    #     reduce_noise=True,
+    #     noise_reduce_kwargs={"n_std_thresh": 2.0, "prop_decrease": 0.8},
+    #     n_jobs=1,
+    #     verbosity=1,
     # chunk_len = {
-    #     'type': 'ms',
-    #     'value': 1000
+    #     'type': 'stft_win',
+    #     'value': 256
     # }
-    chunk_len = {
-        'type': 'stft_win',
-        'value': 256
-    }
 
-    for sr, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz, hop_length_ms, \
-        win_length_ms, ref_level_db, power in \
-            itertools.product(sr_l, num_mel_bins_l, n_fft_l, mel_lower_edge_hertz_l, mel_upper_edge_hertz_l,
-                              hop_length_ms_l, win_length_ms_l, ref_level_db_l, power_l):
-        main(dataset_id=DATASET_ID,
-             debug=debug,
-             sr=sr,
-             num_mel_bins=num_mel_bins,
-             n_fft=n_fft,
-             chunk_len=chunk_len,
-             mel_lower_edge_hertz=mel_lower_edge_hertz,
-             mel_upper_edge_hertz=mel_upper_edge_hertz,
-             hop_length_ms=hop_length_ms,
-             win_length_ms=win_length_ms,
-             ref_level_db=ref_level_db,
-             power=power
-             )
+    sr = 44100
+    chunk_len = 1000
+    locut = 500
+    hicut = 16000
+    main(dataset_id, sr, chunk_len, locut, hicut)
     print('done')

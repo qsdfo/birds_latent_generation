@@ -51,7 +51,7 @@ def get_dataloader(dataset_type, dataset, batch_size, shuffle):
     return dataloader
 
 
-def get_model_and_dataset(config, loading_epoch):
+def get_model_and_dataset(config, loading_epoch, hparams):
     # Use all gpus available
     gpu_ids = [int(gpu) for gpu in range(torch.cuda.device_count())]
     print(f'Using GPUs {gpu_ids}')
@@ -94,14 +94,7 @@ def get_model_and_dataset(config, loading_epoch):
                                          transforms.Normalize(
                                              (0.1307,), (0.3081,))
                                      ]))
-        hparams = None
     else:
-        # Hparams
-        hparams_loc = DATA_DIR / 'syllables' / \
-            f'{dataset_name}_{config["dataset_preprocessing"]}_hparams.pkl'
-        with open(hparams_loc, 'rb') as ff:
-            hparams = pickle.load(ff)
-
         # data
         data_loc = DATA_DIR / 'syllables' / \
             f'{dataset_name}_{config["dataset_preprocessing"]}'

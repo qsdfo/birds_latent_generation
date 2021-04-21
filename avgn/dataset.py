@@ -5,7 +5,6 @@ import numpy as np
 from avgn.utils.paths import DATA_DIR, most_recent_subdirectory
 from avgn.signalprocessing.filtering import prepare_mel_matrix
 from avgn.utils.json_custom import read_json
-from avgn.utils.hparams import HParams
 from tqdm.autonotebook import tqdm
 from joblib import Parallel, delayed
 
@@ -15,15 +14,9 @@ class DataSet(object):
     """
 
     def __init__(
-        self, DATASET_ID, hparams=None, default_rate=None, build_mel_matrix=True
+        self, DATASET_ID,
     ):
         self.default_rate = None
-
-        if hparams is None:
-            self.hparams = HParams()
-        else:
-            self.hparams = hparams
-
         self.DATASET_ID = DATASET_ID
         if type(self.DATASET_ID) == list:
             self.dataset_loc = [
@@ -34,15 +27,9 @@ class DataSet(object):
                 DATA_DIR / "processed" / DATASET_ID
             )
         self._get_wav_json_files()
-
         self.sample_json = read_json(self.json_files[0])
-
         self._load_datafiles()
-
         self._get_unique_individuals()
-
-        if build_mel_matrix:
-            self.build_mel_matrix()
 
     def _get_wav_json_files(self):
         """ find wav and json files in data folder
@@ -55,16 +42,6 @@ class DataSet(object):
         else:
             self.wav_files = list((self.dataset_loc / "WAV").glob("*.WAV"))
             self.json_files = list((self.dataset_loc / "JSON").glob("*.JSON"))
-
-    def build_mel_matrix(self, rate=None):
-        if rate is None:
-            rate = self.sample_json["samplerate_hz"]
-        self.mel_matrix = prepare_mel_matrix(self.hparams, rate)
-
-    def build_inverse_mel_matrix(self, rate=None):
-        if rate is None:
-            rate = self.sample_json["samplerate_hz"]
-        self.mel_matrix = prepare_mel_matrix(self.hparams, rate)
 
     def _get_unique_individuals(self):
         self.json_indv = np.array(
@@ -81,7 +58,7 @@ class DataSet(object):
 
     def _load_datafiles(self):
         with Parallel(
-            n_jobs=self.hparams.n_jobs, verbose=self.hparams.verbosity
+            n_jobs=1, verbose=1
         ) as parallel:
             df = parallel(
                 delayed(DataFile)(i) for i in tqdm(self.json_files, desc="loading json")

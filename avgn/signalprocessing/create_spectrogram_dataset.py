@@ -1,7 +1,6 @@
 import collections
 
 import librosa
-import soundfile as sf
 import noisereduce as nr
 import numpy as np
 import pandas as pd
@@ -186,16 +185,11 @@ def create_syllable_df(
         return syllable_df
 
 
-def prepare_wav(wav_loc, hparams, debug):
+def prepare_wav(wav_loc, sr, locut, hicut, noise_reduce_kwargs):
     """ load wav and convert to correct format
     """
-    if debug:
-        debug_data = {}
-    else:
-        debug_data = None
-
     # get rate and date
-    data, _ = librosa.load(wav_loc, sr=hparams.sr)
+    data, _ = librosa.load(wav_loc, sr=sr)
 
     # convert data if needed
     if np.issubdtype(type(data[0]), np.integer):
@@ -203,49 +197,32 @@ def prepare_wav(wav_loc, hparams, debug):
 
     # Chunks to avoid memory issues
     len_chunk_minutes = 10
-    len_chunk_sample = hparams.sr * 60 * len_chunk_minutes
+    len_chunk_sample = sr * 60 * len_chunk_minutes
     data_chunks = []
     for t in range(0, len(data), len_chunk_sample):
         start = t
         end = min(len(data), t + len_chunk_sample)
         data_chunks.append(data[start:end])
-        # only keep one chunk for debug
-        if debug:
-            break
 
     # bandpass filter
     data_cleaned = []
-    if hparams is not None:
-        for data in data_chunks:
-
-            if debug:
-                debug_data['x'] = data
-
-            data = butter_bandpass_filter(
-                data, hparams.butter_lowcut, hparams.butter_highcut, hparams.sr, order=5
-            )
-            if debug:
-                debug_data['x_filtered'] = data
-
-            # reduce noise
-            if hparams.reduce_noise:
-                data = nr.reduce_noise(
-                    audio_clip=data, noise_clip=data, **hparams.noise_reduce_kwargs
-                )
-            if debug:
-                debug_data['x_rn'] = data
-            data_cleaned.append(data)
-    else:
-        data_cleaned = data_chunks
+    for data in data_chunks:
+        data = butter_bandpass_filter(
+            data, locut, hicut, sr, order=5
+        )
+        # reduce noise
+        data = nr.reduce_noise(
+            audio_clip=data, noise_clip=data, **noise_reduce_kwargs
+        )
+        data_cleaned.append(data)
 
     #  concatenate chunks
     data = np.concatenate(data_cleaned)
-    return data, debug_data
+    return data
 
 
 def create_label_df(
         json_dict,
-        hparams=None,
         labels_to_retain=[],
         unit="syllables",
         dict_features_to_retain=[],
