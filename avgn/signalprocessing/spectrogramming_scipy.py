@@ -99,22 +99,13 @@ def build_mel_inversion_basis(_mel_basis):
     return mel_inverse_basis
 
 
-def build_mel_basis(hparams, fs, rate=None, use_n_fft=True):
-    if "n_fft" not in hparams.__dict__ or not use_n_fft:
-        if "num_freq" in hparams.__dict__:
-            n_fft = (hparams.num_freq - 1) * 2
-        else:
-            n_fft = int(hparams.win_length_ms / 1000 * fs)
-    else:
-        n_fft = hparams.n_fft
-    if rate is None:
-        rate = hparams.sr
+def build_mel_basis(n_fft, rate, num_mel_bins, mel_lower_edge_hertz, mel_upper_edge_hertz):
     _mel_basis = librosa.filters.mel(
         rate,
         n_fft,
-        n_mels=hparams.num_mel_bins,
-        fmin=hparams.mel_lower_edge_hertz,
-        fmax=hparams.mel_upper_edge_hertz,
+        n_mels=num_mel_bins,
+        fmin=mel_lower_edge_hertz,
+        fmax=mel_upper_edge_hertz,
     )
     # Normalise contribution of mel coeff to 1 for 1 output bin
     return (_mel_basis.T / np.sum(_mel_basis + _epsilon(), axis=1)).T

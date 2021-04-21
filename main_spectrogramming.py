@@ -131,43 +131,8 @@ def main(dataset_id, sr, chunk_len_max_ms, locut, hicut):
     print(f'Skipped counter: {skipped_counter}')
 
 if __name__ == '__main__':
-    # dataset_id = 'BIRD_DB_CATH'
-    # dataset_id = 'Bird_all'
-    # dataset_id = 'Test'
-    # dataset_id = 'voizo_all'
-    # dataset_id = 'voizo_all_segmented'
-    dataset_id = 'voizo_chunks_test_segmented'
-
-    # sr_l = [44100]
-    # num_mel_bins_l = [64]
-    # # there is not much low frequencies, probably a relatively small value is better for better temporal resolution
-    # # 512, but if sr is 16k, we can use a smaller n_fft like 128
-    # n_fft_l = [512]
-    # # lowest freq = sr / n_fft does not need to be lower
-    # # than mel_lower_eddge + gain temporal resolution, but increases number of frames in th STFT.... tradeoff!!
-    # mel_lower_edge_hertz_l = [500]
-    # mel_upper_edge_hertz_l = [16000]
-    # hop_length_ms_l = [None]
-    # win_length_ms_l = [None]
-    # power_l = [1.5]
-    # ref_level_db_l = [-35]
-    # # Chunk length can be set either in ms, samples or stft_win
-    # # chunk_len = {
-    # #     'type': 'ms',
-    # #     'value': 1000
-    # # }
-    #     preemphasis=0.97,
-    #     mask_spec=False,
-    #     mask_spec_kwargs={"spec_thresh": 0.9, "offset": 1e-10},
-    #     reduce_noise=True,
-    #     noise_reduce_kwargs={"n_std_thresh": 2.0, "prop_decrease": 0.8},
-    #     n_jobs=1,
-    #     verbosity=1,
-    # chunk_len = {
-    #     'type': 'stft_win',
-    #     'value': 256
-    # }
-
+    dataset_id = 'voizo_all_segmented'
+    # dataset_id = 'voizo_chunks_test_segmented'
     sr = 44100
     chunk_len = 1000
     locut = 500

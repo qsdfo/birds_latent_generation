@@ -51,7 +51,7 @@ def get_dataloader(dataset_type, dataset, batch_size, shuffle):
     return dataloader
 
 
-def get_model_and_dataset(config, loading_epoch, hparams):
+def get_model_and_dataset(config, loading_epoch):
     # Use all gpus available
     gpu_ids = [int(gpu) for gpu in range(torch.cuda.device_count())]
     print(f'Using GPUs {gpu_ids}')
@@ -96,8 +96,7 @@ def get_model_and_dataset(config, loading_epoch, hparams):
                                      ]))
     else:
         # data
-        data_loc = DATA_DIR / 'syllables' / \
-            f'{dataset_name}_{config["dataset_preprocessing"]}'
+        data_loc = DATA_DIR / 'syllables' / f'{config["dataset"]}'
         syllable_paths = glob.glob(f'{str(data_loc)}/[0-9]*')
         random.seed(1234)
         random.shuffle(syllable_paths)
@@ -111,8 +110,8 @@ def get_model_and_dataset(config, loading_epoch, hparams):
             dataset_train = SingDataset(syllable_paths_train)
             dataset_val = SingDataset(syllable_paths_val)
         elif config['model_type'] == 'VAE':
-            dataset_train = SpectroDataset(syllable_paths_train, hparams, data_augmentations=True)
-            dataset_val = SpectroDataset(syllable_paths_val, hparams, data_augmentations=False)
+            dataset_train = SpectroDataset(syllable_paths_train, config['data_processing'], data_augmentations=True)
+            dataset_val = SpectroDataset(syllable_paths_val, config['data_processing'], data_augmentations=False)
             # dataset_train = SpectroCategoricalDataset(syllable_df_train)
             # dataset_val = SpectroCategoricalDataset(syllable_df_val)
         else:
@@ -147,4 +146,4 @@ def get_model_and_dataset(config, loading_epoch, hparams):
         model.load(name=loading_epoch, device=device)
 
     model.to(device)
-    return model, dataset_train, dataset_val, optimizer, hparams, config, model_path, config_path
+    return model, dataset_train, dataset_val, optimizer, config, model_path, config_path

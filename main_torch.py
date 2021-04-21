@@ -24,7 +24,7 @@ def main(config,
          train):
 
     # Init model and dataset
-    model, dataset_train, dataset_val, optimizer, hparams, config, model_path, config_path = get_model_and_dataset(
+    model, dataset_train, dataset_val, optimizer, config, model_path, config_path = get_model_and_dataset(
         config=config, loading_epoch=load)
 
     # Training
