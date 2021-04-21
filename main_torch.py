@@ -1,3 +1,4 @@
+import time
 import numpy as np
 from avgn.pytorch.dataset.spectro_dataset import SpectroDataset
 from avgn.signalprocessing.spectrogramming_scipy import build_mel_basis
@@ -179,13 +180,18 @@ def epoch(model, optimizer, dataloader, num_batches, training):
         model.eval()
     losses = []
     for batch_idx, data in enumerate(dataloader):
+        aaa = time.time()
         if num_batches is not None and batch_idx > num_batches:
             break
         optimizer.zero_grad()
+        bbb = time.time()
         loss = model.step(data)
+        ccc = time.time()
         if training:
             loss.backward()
             optimizer.step()
+        ddd = time.time()
+        print(f'forward {bbb-aaa}, backward {ddd-ccc}')
         losses.append(loss.item())
     mean_loss = sum(losses) / len(losses)
     return mean_loss
