@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from tqdm import tqdm
-import math
+import pyrubberband
 
 from avgn.dataset import DataSet
 from avgn.signalprocessing.create_spectrogram_dataset import create_label_df, prepare_wav
@@ -60,8 +60,8 @@ def main(debug, sr, num_mel_bins, n_fft, chunk_len, mel_lower_edge_hertz, mel_up
     # DATASET_ID = 'Bird_all'
     # DATASET_ID = 'Test'
     # DATASET_ID = 'voizo_all'
-    DATASET_ID = 'voizo_all_segmented'
-    # DATASET_ID = 'voizo_chunks_test_segmented'
+    # DATASET_ID = 'voizo_all_segmented'
+    DATASET_ID = 'voizo_chunks_test_segmented'
     ind_examples = [200, 400, 500, 600, 800, 1000, 1200, 1400, 1600, 1800]
 
     # STFT time parameters
@@ -78,20 +78,24 @@ def main(debug, sr, num_mel_bins, n_fft, chunk_len, mel_lower_edge_hertz, mel_up
     if chunk_len['type'] == 'ms':
         chunk_len_ms = chunk_len['value']
         chunk_len_samples_not_rounded = ms_to_sample(chunk_len_ms, sr)
-        chunk_len_win = round((chunk_len_samples_not_rounded - win_length) / hop_length) + 1
+        chunk_len_win = round(
+            (chunk_len_samples_not_rounded - win_length) / hop_length) + 1
         chunk_len_samples = (chunk_len_win - 1) * hop_length + win_length
     elif chunk_len['type'] == 'samples':
         chunk_len_samples_not_rounded = chunk_len['value']
-        chunk_len_win = round((chunk_len_samples_not_rounded - win_length) / hop_length) + 1
+        chunk_len_win = round(
+            (chunk_len_samples_not_rounded - win_length) / hop_length) + 1
         chunk_len_samples = (chunk_len_win - 1) * hop_length + win_length
     elif chunk_len['type'] == 'stft_win':
         chunk_len_win = chunk_len['value']
         chunk_len_samples = (chunk_len_win - 1) * hop_length + win_length
     ################################################################################
     print('Chunk length is automatically set to match STFT windows/hop sizes')
-    print(f'STFT win length: {win_length} samples, {1000 * win_length / sr} ms')
+    print(
+        f'STFT win length: {win_length} samples, {1000 * win_length / sr} ms')
     print(f'STFT hop length: {hop_length} samples, {1000* hop_length / sr} ms')
-    print(f'Chunk length: {chunk_len_samples} samples, {chunk_len_win} win, {chunk_len_samples * 1000 / sr} ms')
+    print(
+        f'Chunk length: {chunk_len_samples} samples, {chunk_len_win} win, {chunk_len_samples * 1000 / sr} ms')
 
     ################################################################################
     print('Create dataset')
@@ -165,42 +169,41 @@ def main(debug, sr, num_mel_bins, n_fft, chunk_len, mel_lower_edge_hertz, mel_up
         data = data.astype('float32')
         # process each syllable
         for syll_ind, (st, et) in enumerate(zip(this_syllable_df.start_time.values, this_syllable_df.end_time.values)):
-            s = data[int(st * hparams.sr): int(et * hparams.sr)]
-            sn, mS, debug_info = process_syllable(
-                syl=s, hparams=hparams, mel_basis=mel_basis, debug=debug)
-            if sn is None:
-                skipped_counter += 1
-                continue
-            # Save as uint to save space
-            mS_int = (mS * 255).astype('uint8')
-            save_dict = {
-                'mS_int': mS_int,
-                'sn': sn,
-                'indv': this_syllable_df.indv[syll_ind],
-                'label': this_syllable_df.species[syll_ind]
-            }
-            fname = save_loc / str(counter)
-            with open(fname, 'wb') as ff:
-                pkl.dump(save_dict, ff)
-            counter += 1
+            x = data[int(st * hparams.sr): int(et * hparams.sr)]
+            for time_shift in np.arange(0.75, 1.25, 0.05):
+                for pitch_shift in range(-2, 3):
+                    # data augmentations
+                    data_aug_bool = False
+                    if time_shift != 1:
+                        sn_t = pyrubberband.pyrb.time_stretch(
+                            x, sr=hparams.sr, rate=time_shift)
+                        data_aug_bool = True
+                    else:
+                        sn_t = x
+                    if pitch_shift != 0:
+                        sn_tp = pyrubberband.pyrb.pitch_shift(
+                            sn_t, sr=hparams.sr, n_steps=pitch_shift)
+                        data_aug_bool = True
+                    else:
+                        sn_tp = sn_t
 
-            if debug and (counter in ind_examples):
-                # normalised audio
-                sf.write(f'{dump_folder}/{counter}_sn.wav',
-                         sn, samplerate=hparams.sr)
-                #  Padded mel db norm spectro
-                plt.clf()
-                plt.matshow(mS, origin="lower")
-                plt.savefig(f'{dump_folder}/{counter}_mS.pdf')
-                plt.close()
-                audio_reconstruct = inv_spectrogram_sp(mS, n_fft=hparams.n_fft,
-                                                       win_length=hparams.win_length_samples,
-                                                       hop_length=hparams.hop_length_samples,
-                                                       ref_level_db=hparams.ref_level_db,
-                                                       power=hparams.power,
-                                                       mel_inversion_basis=mel_inversion_basis)
-                sf.write(f'{dump_folder}/{counter}_mS.wav',
-                         audio_reconstruct, samplerate=hparams.sr)
+                    sn, mS, debug_info = process_syllable(
+                        syl=sn_tp, hparams=hparams, mel_basis=mel_basis, debug=debug)
+                    if sn is None:
+                        skipped_counter += 1
+                        continue
+                    # Save as uint to save space
+                    mS_int = (mS * 255).astype('uint8')
+                    save_dict = {
+                        'mS_int': mS_int,
+                        'sn': sn,
+                        'indv': this_syllable_df.indv[syll_ind],
+                        'label': this_syllable_df.species[syll_ind],
+                        'data_augmented': data_aug_bool}
+                    fname = save_loc / str(counter)
+                    with open(fname, 'wb') as ff:
+                        pkl.dump(save_dict, ff)
+                    counter += 1
 
     print(f'Skipped counter: {skipped_counter}')
     #  Save hparams
@@ -223,11 +226,12 @@ if __name__ == '__main__':
     sr_l = [44100]
     num_mel_bins_l = [64]
     # there is not much low frequencies, probably a relatively small value is better for better temporal resolution
-    n_fft_l = [512]  # 512, but if sr is 16k, we can use a smaller n_fft like 128
+    # 512, but if sr is 16k, we can use a smaller n_fft like 128
+    n_fft_l = [512]
     # lowest freq = sr / n_fft does not need to be lower
     # than mel_lower_eddge + gain temporal resolution, but increases number of frames in th STFT.... tradeoff!!
     mel_lower_edge_hertz_l = [500]
-    mel_upper_edge_hertz_l = [7900]
+    mel_upper_edge_hertz_l = [16000]
     hop_length_ms_l = [None]
     win_length_ms_l = [None]
     power_l = [1.5]
