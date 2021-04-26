@@ -32,7 +32,8 @@ def process_syllable(syl, hparams, mel_basis, debug):
         return None, None, None
     else:
         syl_pad = np.zeros((hparams.chunk_len_samples))
-        syl_pad[:syl_len] = syl
+        pad_left = syl_len // 2
+        syl_pad[pad_left:pad_left + syl_len] = syl
     # Normalise
     sn = syl_pad / np.max(syl_pad)
     # convert to float
