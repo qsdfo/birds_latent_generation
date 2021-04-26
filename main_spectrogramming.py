@@ -32,7 +32,8 @@ def process_syllable(syl, hparams, mel_basis, debug):
         return None, None, None
     else:
         syl_pad = np.zeros((hparams.chunk_len_samples))
-        syl_pad[:syl_len] = syl
+        pad_left = (hparams.chunk_len_samples - syl_len) // 2
+        syl_pad[pad_left:pad_left + syl_len] = syl
     # Normalise
     sn = syl_pad / np.max(syl_pad)
     # convert to float
@@ -170,7 +171,7 @@ def main(debug, sr, num_mel_bins, n_fft, chunk_len, mel_lower_edge_hertz, mel_up
         # process each syllable
         for syll_ind, (st, et) in enumerate(zip(this_syllable_df.start_time.values, this_syllable_df.end_time.values)):
             x = data[int(st * hparams.sr): int(et * hparams.sr)]
-            for time_shift in np.arange(0.75, 1.25, 0.05):
+            for time_shift in np.arange(0.9, 1.1, 0.1):
                 for pitch_shift in range(-2, 3):
                     # data augmentations
                     data_aug_bool = False
