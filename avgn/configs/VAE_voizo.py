@@ -11,7 +11,7 @@ hop_length = 128
 n_fft = 512
 chunkls = 33152
 mel_lower_edge_hertz = 500
-mel_upper_edge_hertz = 7900
+mel_upper_edge_hertz = 16000
 
 #  Model
 n_z = 32
@@ -21,7 +21,7 @@ w_dim = time_dim
 
 config = {
     # --- Dataset ---
-    'dataset': 'voizo_all_segmented',
+    'dataset': 'voizo_chunks_test_segmented',
     'dataset_preprocessing': f'sr-{sr}_' \
                              f'wl-{win_length}_' \
                              f'hl-{hop_length}_' \
