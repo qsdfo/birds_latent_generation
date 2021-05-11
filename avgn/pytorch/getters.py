@@ -32,12 +32,12 @@ def get_model(model_type, model_kwargs, encoder, decoder, model_dir):
         raise Exception
 
 
-def get_dataloader(dataset_type, dataset, batch_size, shuffle):
+def get_dataloader(dataset_type, dataset, batch_size, shuffle, num_workers):
     dataloader_ = DataLoader(dataset,
                              batch_size=batch_size,
                              shuffle=shuffle,
                              pin_memory=True,
-                             num_workers=0
+                             num_workers=num_workers
                              )
     if dataset_type == 'mnist':
         # Remove label, don't need it here
