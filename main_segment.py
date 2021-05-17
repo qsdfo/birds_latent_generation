@@ -25,9 +25,7 @@ def main():
      - smaller than max_vocal_for_spec
     Need careful tweaking of these five parameters to find the optimal automatic segmentation...
     """
-    # DATASET_ID = 'voizo_chunks_Nigthingale'
-    # DATASET_ID = 'voizo_chunks_Corvus'
-    DATASET_ID = 'voizo_chunks_test'
+    DATASET_ID = 'voizo_chunks'
     # create a unique datetime identifier
     DT_ID = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
@@ -46,7 +44,7 @@ def main():
 
     ref_level_db = -10
     min_level_db_floor = -30
-    db_delta = 5
+    db_delta = 10
 
     silence_threshold = 0.01
     min_silence_for_spec = 0.05
@@ -55,30 +53,8 @@ def main():
     spectral_range = [mel_lower_edge_hertz,
                       mel_upper_edge_hertz]
 
-    # create an hparam object
-    hparams = HParams(
-        sr=sr,
-        n_fft=n_fft,
-        win_length_samples=ms_to_sample(win_length_ms, sr=sr),
-        hop_length_samples=ms_to_sample(hop_length_ms, sr=sr),
-        chunk_len_samples=None,
-        ref_level_db=ref_level_db,
-        preemphasis=0.97,
-        num_mel_bins=64,
-        power=1.5,
-        mel_lower_edge_hertz=mel_lower_edge_hertz,
-        mel_upper_edge_hertz=mel_upper_edge_hertz,
-        butter_lowcut=butter_lowcut,
-        butter_highcut=butter_highcut,
-        reduce_noise=False,
-        noise_reduce_kwargs={},
-        mask_spec=False,
-        mask_spec_kwargs={"spec_thresh": 0.9, "offset": 1e-10},
-        n_jobs=-1,
-        verbosity=1
-    )
     # create a dataset object
-    dataset = DataSet(DATASET_ID, hparams=hparams)
+    dataset = DataSet(DATASET_ID)
 
     processed_files = []
     segmented_files = []

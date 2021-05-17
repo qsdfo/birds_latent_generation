@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import soundfile as sf
 
 
-def plot_reconstruction(model, hparams, dataloader, savepath, custom_data):
+def plot_reconstruction(model, data_processing, dataloader, savepath, custom_data):
     # Forward pass
     model.eval()
     if custom_data is None:
@@ -36,28 +36,28 @@ def plot_reconstruction(model, hparams, dataloader, savepath, custom_data):
     # audio
     original_audios = []
     reconstruction_audios = []
-    if hparams is not None:
-        mel_basis = build_mel_basis(hparams, hparams.sr, hparams.sr)
-        mel_inversion_basis = build_mel_inversion_basis(mel_basis)
-        for i in range(num_examples):
-            original_audio = inv_spectrogram_sp(x_orig[i, 0], n_fft=hparams.n_fft,
-                                                win_length=hparams.win_length_samples,
-                                                hop_length=hparams.hop_length_samples,
-                                                ref_level_db=hparams.ref_level_db, power=hparams.power,
-                                                mel_inversion_basis=mel_inversion_basis)
-            recon_audio = inv_spectrogram_sp(x_recon[i, 0], n_fft=hparams.n_fft,
-                                             win_length=hparams.win_length_samples,
-                                             hop_length=hparams.hop_length_samples,
-                                             ref_level_db=hparams.ref_level_db, power=hparams.power,
-                                             mel_inversion_basis=mel_inversion_basis)
+    mel_basis = build_mel_basis(data_processing['n_fft'], data_processing['sr'], data_processing['num_mel_bins'],
+                                data_processing['mel_lower_edge_hertz'], data_processing['mel_upper_edge_hertz'])
+    mel_inversion_basis = build_mel_inversion_basis(mel_basis)
+    for i in range(num_examples):
+        original_audio = inv_spectrogram_sp(x_orig[i, 0], n_fft=data_processing['n_fft'],
+                                            win_length=data_processing['win_length'],
+                                            hop_length=data_processing['hop_length'],
+                                            ref_level_db=data_processing['ref_level_db'],
+                                            power=data_processing['power'],
+                                            mel_inversion_basis=mel_inversion_basis)
+        recon_audio = inv_spectrogram_sp(x_recon[i, 0], n_fft=data_processing['n_fft'],
+                                         win_length=data_processing['win_length'],
+                                         hop_length=data_processing['hop_length'],
+                                         ref_level_db=data_processing['ref_level_db'],
+                                         power=data_processing['power'],
+                                         mel_inversion_basis=mel_inversion_basis)
 
-            sf.write(f'{savepath}/{i}_original.wav',
-                     original_audio, samplerate=hparams.sr)
-            sf.write(f'{savepath}/{i}_recon.wav',
-                     recon_audio, samplerate=hparams.sr)
+        sf.write(f'{savepath}/{i}_original.wav', original_audio, samplerate=data_processing['sr'])
+        sf.write(f'{savepath}/{i}_recon.wav', recon_audio, samplerate=data_processing['sr'])
 
-            original_audios.append(original_audio)
-            reconstruction_audios.append(recon_audio)
+        original_audios.append(original_audio)
+        reconstruction_audios.append(recon_audio)
     return {
         'original_audios': original_audios,
         'reconstruction_audios': reconstruction_audios,

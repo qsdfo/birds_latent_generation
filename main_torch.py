@@ -29,7 +29,6 @@ def main(config,
         config=config, loading_epoch=load)
 
     # Training
-    best_val_loss = float('inf')
     num_examples_plot = 10
     if train:
         print('##### Train')
@@ -45,10 +44,11 @@ def main(config,
 
         # Epochs
         for ind_epoch in range(config['num_epochs']):
+            aaa = time.time()
             train_dataloader = get_dataloader(dataset_type=config['dataset'], dataset=dataset_train,
-                                              batch_size=config['batch_size'], shuffle=True)
+                                              batch_size=config['batch_size'], shuffle=True, num_workers=4)
             val_dataloader = get_dataloader(dataset_type=config['dataset'], dataset=dataset_val,
-                                            batch_size=config['batch_size'], shuffle=True)
+                                            batch_size=config['batch_size'], shuffle=True, num_workers=4)
 
             train_loss = epoch(model, optimizer, train_dataloader,
                                num_batches=config['num_batches'], training=True)
@@ -63,8 +63,11 @@ def main(config,
 
             del train_dataloader, val_dataloader
 
+            bbb = time.time()
+            print(f'Time epoch: {bbb-aaa}')
+
             # if (val_loss < best_val_loss) and (ind_epoch % 200 == 0):
-            if ind_epoch % 10 == 0:
+            if ind_epoch % 50 == 0:
                 # Save model
                 model.save(name=ind_epoch)
 
@@ -72,13 +75,13 @@ def main(config,
                 if not os.path.isdir(f'{model.model_dir}/training_plots/{ind_epoch}'):
                     os.mkdir(f'{model.model_dir}/training_plots/{ind_epoch}')
                 test_dataloader = get_dataloader(dataset_type=config['dataset'], dataset=dataset_val,
-                                                 batch_size=num_examples_plot, shuffle=True)
+                                                 batch_size=num_examples_plot, shuffle=True, num_workers=4)
                 savepath = f'{model.model_dir}/training_plots/{ind_epoch}/reconstructions'
                 os.mkdir(savepath)
-                plot_reconstruction(model, hparams, test_dataloader, savepath, custom_data=None)
+                plot_reconstruction(model, config['data_processing'], test_dataloader, savepath, custom_data=None)
                 savepath = f'{model.model_dir}/training_plots/{ind_epoch}/generations'
                 os.mkdir(savepath)
-                plot_generation(model, hparams, num_examples_plot, savepath)
+                plot_generation(model, config['data_processing'], num_examples_plot, savepath)
                 del test_dataloader
 
     # Generations
@@ -105,8 +108,7 @@ def main(config,
         for example_ind, examples_dict in data_source.items():
             for name in ['start', 'end']:
                 # read file
-                syl, _ = prepare_wav(
-                    wav_loc=examples_dict[name]['path'], hparams=hparams, debug=False)
+                syl, _ = prepare_wav(wav_loc=examples_dict[name]['path'], hparams=hparams, debug=False)
                 mel_basis = build_mel_basis(hparams, hparams.sr, hparams.sr)
                 # process syllable
                 sn, mSp, _ = process_syllable(
@@ -180,18 +182,13 @@ def epoch(model, optimizer, dataloader, num_batches, training):
         model.eval()
     losses = []
     for batch_idx, data in enumerate(dataloader):
-        aaa = time.time()
         if num_batches is not None and batch_idx > num_batches:
             break
         optimizer.zero_grad()
-        bbb = time.time()
         loss = model.step(data)
-        ccc = time.time()
         if training:
             loss.backward()
             optimizer.step()
-        ddd = time.time()
-        print(f'forward {bbb-aaa}, backward {ddd-ccc}')
         losses.append(loss.item())
     mean_loss = sum(losses) / len(losses)
     return mean_loss

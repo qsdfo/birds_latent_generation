@@ -6,7 +6,6 @@ import pickle
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-import pyrubberband
 
 
 class SpectroDataset(Dataset):
@@ -35,8 +34,6 @@ class SpectroDataset(Dataset):
         return np.expand_dims(x_np, axis=0)
 
     def __getitem__(self, idx):
-        import time
-        aaa = time.time()
         if torch.is_tensor(idx):
             idx = idx.tolist()
         fname = self.syllable_paths[idx]
@@ -46,7 +43,6 @@ class SpectroDataset(Dataset):
         sn = data['sn']
 
         # data augmentations
-        aaa = time.time()
         # if self.data_augmentations:
         #     time_shift = random.uniform(0.75, 1.25)
         #     sn_t = pyrubberband.pyrb.time_stretch(
@@ -64,11 +60,8 @@ class SpectroDataset(Dataset):
                                                 n_steps=pitch_shift, bins_per_octave=24)
         else:
             sn_tp = sn
-        bbb = time.time()
-        print(f'data aug {bbb-aaa}')
 
         # create spec
-        aaa = time.time()
         mSp, _ = spectrogram_sp(y=sn_tp,
                                 sr=self.data_processing['sr'],
                                 n_fft=self.data_processing['n_fft'],
@@ -80,11 +73,8 @@ class SpectroDataset(Dataset):
                                 power=self.data_processing['power'],
                                 debug=True
                                 )
-        bbb = time.time()
-        print(f'spectrogramming {bbb-aaa}')
 
         # pad
-        aaa = time.time()
         win_len = mSp.shape[1]
         if win_len < self.data_processing['chunk_len_win']:
             pad_size = (self.data_processing['chunk_len_win'] - win_len) // 2
@@ -93,8 +83,6 @@ class SpectroDataset(Dataset):
             mSp_pad[:, pad_size:(pad_size + win_len)] = mSp
         else:
             mSp_pad = mSp[:, :self.data_processing['chunk_len_win']]
-        bbb = time.time()
-        print(f'padding {bbb-aaa}')
 
         # conv in pytorch are
         # (batch, channel, height, width)
