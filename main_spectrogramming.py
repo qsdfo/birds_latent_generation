@@ -212,12 +212,12 @@ def main(dataset_id, data_aug, debug, sr, num_mel_bins, n_fft, chunk_len, mel_lo
                         mel_inversion_basis = build_mel_inversion_basis(
                             mel_basis)
                         # normalised audio
-                        sf.write(f'{dump_folder}/{counter}_{time_shift}_{pitch_shift}_sn.wav',
+                        sf.write(f'{dump_folder}/{syll_ind}_{time_shift}_{pitch_shift}_sn.wav',
                                  sn, samplerate=hparams.sr)
                         #  Padded mel db norm spectro
                         plt.clf()
                         plt.matshow(mS, origin="lower")
-                        plt.savefig(f'{dump_folder}/{counter}_{time_shift}_{pitch_shift}_mS.pdf')
+                        plt.savefig(f'{dump_folder}/{syll_ind}_{time_shift}_{pitch_shift}_mS.pdf')
                         plt.close()
                         audio_reconstruct = inv_spectrogram_sp(mS, n_fft=hparams.n_fft,
                                                                win_length=hparams.win_length_samples,
@@ -225,7 +225,7 @@ def main(dataset_id, data_aug, debug, sr, num_mel_bins, n_fft, chunk_len, mel_lo
                                                                ref_level_db=hparams.ref_level_db,
                                                                power=hparams.power,
                                                                mel_inversion_basis=mel_inversion_basis)
-                        sf.write(f'{dump_folder}/{counter}_{time_shift}_{pitch_shift}_mS.wav',
+                        sf.write(f'{dump_folder}/{syll_ind}_{time_shift}_{pitch_shift}_mS.wav',
                                  audio_reconstruct, samplerate=hparams.sr)
 
     print(f'Skipped counter: {skipped_counter}')
@@ -250,7 +250,7 @@ if __name__ == '__main__':
     # DATASET_ID = 'voizo_all'
     dataset_id = 'voizo-co-ni_segmented'
     # dataset_id = 'voizo_chunks_test_segmented'
-    data_aug = False
+    data_aug = True
 
     # Grid search
     debug = True

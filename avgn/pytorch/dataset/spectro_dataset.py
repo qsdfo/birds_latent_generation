@@ -5,9 +5,11 @@ from torch.utils.data import Dataset
 
 
 class SpectroDataset(Dataset):
-    def __init__(self, syllable_paths):
+    def __init__(self, syllable_paths, chunk_len_win, num_mel_bins):
         super(SpectroDataset, self).__init__()
         self.syllable_paths = syllable_paths
+        self.chunk_len_win = chunk_len_win
+        self.num_mel_bins = num_mel_bins
 
     def __len__(self):
         return len(self.syllable_paths)
@@ -29,14 +31,19 @@ class SpectroDataset(Dataset):
             data = pickle.load(ff)
         mSp = data['mS_int']
 
-        raise NotImplementedError("Padding not implemented")
-        # syl_pad = np.zeros((hparams.chunk_len_samples))
-        # pad_left = (hparams.chunk_len_samples - syl_len) // 2
-        # syl_pad[pad_left:pad_left + syl_len] = syl
+        # Pad
+        win_len = mSp.shape[1]
+        if win_len < self.chunk_len_win:
+            pad_size = (self.chunk_len_win - win_len) // 2
+            mSp_pad = np.zeros(
+                (self.num_mel_bins, self.chunk_len_win))
+            mSp_pad[:, pad_size:(pad_size + win_len)] = mSp
+        else:
+            mSp_pad = mSp[:, :self.data_processing['chunk_len_win']]
 
         # conv in pytorch are
         # (batch, channel, height, width)
-        sample = SpectroDataset.process_mSp(mSp)
+        sample = SpectroDataset.process_mSp(mSp_pad)
         return {
             'input': sample,
             'target': sample,
