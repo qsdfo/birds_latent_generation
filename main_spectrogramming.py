@@ -55,14 +55,18 @@ def process_syllable(syl, hparams, mel_basis, debug):
     return sn, mS, debug_info
 
 
-def main(debug, sr, num_mel_bins, n_fft, chunk_len, mel_lower_edge_hertz, mel_upper_edge_hertz,
+def main(dataset_id, data_aug, debug, sr, num_mel_bins, n_fft, chunk_len, mel_lower_edge_hertz, mel_upper_edge_hertz,
          hop_length_ms, win_length_ms, ref_level_db, power):
-    # DATASET_ID = 'BIRD_DB_CATH'
-    # DATASET_ID = 'Bird_all'
-    # DATASET_ID = 'Test'
-    # DATASET_ID = 'voizo_all'
-    DATASET_ID = 'voizo_all_segmented'
-    # DATASET_ID = 'voizo_chunks_test_segmented'
+
+    ind_examples = [0, 10, 20, 50, 100, 250, 500, 750]
+
+    # Data augmentations
+    if data_aug:
+        time_shifts = [0.9, 1.0, 1.1]
+        pitch_shifts = [-2, -1, 0, 1, 2]
+    else:
+        time_shifts = [1.0]
+        pitch_shifts = [0]
 
     # STFT time parameters
     if win_length_ms is None:
@@ -120,7 +124,10 @@ def main(debug, sr, num_mel_bins, n_fft, chunk_len, mel_lower_edge_hertz, mel_up
         n_jobs=1,
         verbosity=1,
     )
-    suffix = hparams.__repr__()
+    if data_aug:
+        suffix = f'{hparams.__repr__()}_dataAug'
+    else:
+        suffix = f'{hparams.__repr__()}'
 
     if debug:
         dump_folder = f'dump/{suffix}'
@@ -130,7 +137,7 @@ def main(debug, sr, num_mel_bins, n_fft, chunk_len, mel_lower_edge_hertz, mel_up
     else:
         dump_folder = None
 
-    dataset = DataSet(DATASET_ID, hparams=hparams)
+    dataset = DataSet(dataset_id, hparams=hparams)
     print(f'Number files: {len(dataset.data_files)}')
 
     ################################################################################
@@ -154,9 +161,11 @@ def main(debug, sr, num_mel_bins, n_fft, chunk_len, mel_lower_edge_hertz, mel_up
     print('Get audio for dataset')
     mel_basis = build_mel_basis(hparams, hparams.sr, hparams.sr)
     counter = 0
-    save_loc = DATA_DIR / 'syllables' / f'{DATASET_ID}_{suffix}'
-    if os.path.isdir(save_loc):
+    save_loc = DATA_DIR / 'syllables' / f'{dataset_id}_{suffix}'
+    if os.path.isdir(f'{save_loc}_saved'):
         raise Exception('already exists')
+    else:
+        shutil.rmtree(save_loc)
     os.makedirs(save_loc)
     skipped_counter = 0
     for key in syllable_df.key.unique():
@@ -169,11 +178,11 @@ def main(debug, sr, num_mel_bins, n_fft, chunk_len, mel_lower_edge_hertz, mel_up
         # process each syllable
         for syll_ind, (st, et) in enumerate(zip(this_syllable_df.start_time.values, this_syllable_df.end_time.values)):
             x = data[int(st * hparams.sr): int(et * hparams.sr)]
-            for time_shift in np.arange(0.9, 1.1, 0.1):
-                for pitch_shift in range(-2, 3):
+            for time_shift in time_shifts:
+                for pitch_shift in pitch_shifts:
                     # data augmentations
                     data_aug_bool = False
-                    if time_shift != 1:
+                    if time_shift != 1.0:
                         sn_t = pyrubberband.pyrb.time_stretch(
                             x, sr=hparams.sr, rate=time_shift)
                         data_aug_bool = True
@@ -186,7 +195,7 @@ def main(debug, sr, num_mel_bins, n_fft, chunk_len, mel_lower_edge_hertz, mel_up
                     else:
                         sn_tp = sn_t
 
-                    sn, mS, debug_info = process_syllable(
+                    sn, mS, _ = process_syllable(
                         syl=sn_tp, hparams=hparams, mel_basis=mel_basis, debug=debug)
                     if sn is None:
                         skipped_counter += 1
@@ -204,6 +213,26 @@ def main(debug, sr, num_mel_bins, n_fft, chunk_len, mel_lower_edge_hertz, mel_up
                         pkl.dump(save_dict, ff)
                     counter += 1
 
+                    if debug and (syll_ind in ind_examples):
+                        mel_inversion_basis = build_mel_inversion_basis(
+                            mel_basis)
+                        # normalised audio
+                        sf.write(f'{dump_folder}/{counter}_{time_shift}_{pitch_shift}_sn.wav',
+                                 sn, samplerate=hparams.sr)
+                        #  Padded mel db norm spectro
+                        plt.clf()
+                        plt.matshow(mS, origin="lower")
+                        plt.savefig(f'{dump_folder}/{counter}_{time_shift}_{pitch_shift}_mS.pdf')
+                        plt.close()
+                        audio_reconstruct = inv_spectrogram_sp(mS, n_fft=hparams.n_fft,
+                                                               win_length=hparams.win_length_samples,
+                                                               hop_length=hparams.hop_length_samples,
+                                                               ref_level_db=hparams.ref_level_db,
+                                                               power=hparams.power,
+                                                               mel_inversion_basis=mel_inversion_basis)
+                        sf.write(f'{dump_folder}/{counter}_{time_shift}_{pitch_shift}_mS.wav',
+                                 audio_reconstruct, samplerate=hparams.sr)
+
     print(f'Skipped counter: {skipped_counter}')
     #  Save hparams
     print("Save hparams")
@@ -216,9 +245,18 @@ def main(debug, sr, num_mel_bins, n_fft, chunk_len, mel_lower_edge_hertz, mel_up
     with open(hparams_loc, 'w') as ff:
         for k, v in hparams.__dict__.items():
             ff.write(f'{k}: {v}\n')
+    open(f'{save_loc}_saved', 'w').close()
 
 
 if __name__ == '__main__':
+    # DATASET_ID = 'BIRD_DB_CATH'
+    # DATASET_ID = 'Bird_all'
+    # DATASET_ID = 'Test'
+    # DATASET_ID = 'voizo_all'
+    # DATASET_ID = 'voizo-co-ni_segmented'
+    dataset_id = 'voizo_chunks_test_segmented'
+    data_aug = True
+
     # Grid search
     debug = True
     # sr: 44100 for spec-based models, 16000 for sample-based models
@@ -249,7 +287,9 @@ if __name__ == '__main__':
         win_length_ms, ref_level_db, power in \
             itertools.product(sr_l, num_mel_bins_l, n_fft_l, mel_lower_edge_hertz_l, mel_upper_edge_hertz_l,
                               hop_length_ms_l, win_length_ms_l, ref_level_db_l, power_l):
-        main(debug=debug,
+        main(dataset_id=dataset_id,
+             data_aug=data_aug,
+             debug=debug,
              sr=sr,
              num_mel_bins=num_mel_bins,
              n_fft=n_fft,
@@ -259,6 +299,6 @@ if __name__ == '__main__':
              hop_length_ms=hop_length_ms,
              win_length_ms=win_length_ms,
              ref_level_db=ref_level_db,
-             power=power
+             power=power,
              )
     print('done')
