@@ -46,12 +46,14 @@ def main(config,
         for ind_epoch in range(config['num_epochs']):
             aaa = time.time()
             train_dataloader = get_dataloader(dataset_type=config['dataset'], dataset=dataset_train,
-                                              batch_size=config['batch_size'], shuffle=True, num_workers=4)
+                                              batch_size=config['batch_size'], shuffle=True, num_workers=8)
             val_dataloader = get_dataloader(dataset_type=config['dataset'], dataset=dataset_val,
-                                            batch_size=config['batch_size'], shuffle=True, num_workers=4)
+                                            batch_size=config['batch_size'], shuffle=True, num_workers=8)
 
+            bbb = time.time()
             train_loss = epoch(model, optimizer, train_dataloader,
                                num_batches=config['num_batches'], training=True)
+            ccc = time.time()
             val_loss = epoch(model, optimizer, val_dataloader,
                              num_batches=config['num_batches'], training=False)
             writer.add_scalar('train_loss', train_loss, ind_epoch)
@@ -63,8 +65,9 @@ def main(config,
 
             del train_dataloader, val_dataloader
 
-            bbb = time.time()
-            print(f'Time epoch: {bbb-aaa}')
+            ddd = time.time()
+            print(f'Time epoch: {ddd-aaa}')
+            print(f'Time training epoch: {ccc-bbb}')
 
             # if (val_loss < best_val_loss) and (ind_epoch % 200 == 0):
             if ind_epoch % 50 == 0:
@@ -75,7 +78,7 @@ def main(config,
                 if not os.path.isdir(f'{model.model_dir}/training_plots/{ind_epoch}'):
                     os.mkdir(f'{model.model_dir}/training_plots/{ind_epoch}')
                 test_dataloader = get_dataloader(dataset_type=config['dataset'], dataset=dataset_val,
-                                                 batch_size=num_examples_plot, shuffle=True, num_workers=4)
+                                                 batch_size=num_examples_plot, shuffle=True, num_workers=8)
                 savepath = f'{model.model_dir}/training_plots/{ind_epoch}/reconstructions'
                 os.mkdir(savepath)
                 plot_reconstruction(model, config['data_processing'], test_dataloader, savepath, custom_data=None)

@@ -31,7 +31,7 @@ w_dim = time_dim
 
 config = {
     # --- Dataset ---
-    'dataset': f'voizo_all_segmented_{suffix}',
+    'dataset': f'voizo-co-ni_segmented_{suffix}',
     'data_processing': {
         'sr': sr,
         'num_mel_bins': num_mel_bins,

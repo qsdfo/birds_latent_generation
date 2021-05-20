@@ -71,7 +71,7 @@ class SpectroDataset(Dataset):
                                 _mel_basis=self.mel_basis,
                                 pre_emphasis=self.data_processing['preemphasis'],
                                 power=self.data_processing['power'],
-                                debug=True
+                                debug=False
                                 )
 
         # pad

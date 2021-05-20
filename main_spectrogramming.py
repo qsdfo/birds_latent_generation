@@ -131,8 +131,8 @@ def main(dataset_id, sr, chunk_len_max_ms, locut, hicut):
     print(f'Skipped counter: {skipped_counter}')
 
 if __name__ == '__main__':
-    dataset_id = 'voizo_all_segmented'
-    # dataset_id = 'voizo_chunks_test_segmented'
+    # dataset_id = 'voizo_segmented'
+    dataset_id = 'voizo-co-ni_segmented'
     sr = 44100
     chunk_len = 1000
     locut = 500
