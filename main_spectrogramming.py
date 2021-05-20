@@ -27,15 +27,11 @@ def process_syllable(syl, hparams, mel_basis, debug):
         return None, None, None
     if np.max(syl) == 0:
         return None, None, None
-    # If too long skip, else pad
+    # If too long skip
     if syl_len > hparams.chunk_len_samples:
         return None, None, None
-    else:
-        syl_pad = np.zeros((hparams.chunk_len_samples))
-        pad_left = (hparams.chunk_len_samples - syl_len) // 2
-        syl_pad[pad_left:pad_left + syl_len] = syl
     # Normalise
-    sn = syl_pad / np.max(syl_pad)
+    sn = syl / np.max(syl)
     # convert to float
     if type(sn[0]) == int:
         sn = int16_to_float32(sn)
@@ -165,7 +161,8 @@ def main(dataset_id, data_aug, debug, sr, num_mel_bins, n_fft, chunk_len, mel_lo
     if os.path.isdir(f'{save_loc}_saved'):
         raise Exception('already exists')
     else:
-        shutil.rmtree(save_loc)
+        if os.path.isdir(f'{save_loc}'):
+            shutil.rmtree(save_loc)
     os.makedirs(save_loc)
     skipped_counter = 0
     for key in syllable_df.key.unique():
@@ -200,10 +197,8 @@ def main(dataset_id, data_aug, debug, sr, num_mel_bins, n_fft, chunk_len, mel_lo
                     if sn is None:
                         skipped_counter += 1
                         continue
-                    # Save as uint to save space
-                    mS_int = (mS * 255).astype('uint8')
                     save_dict = {
-                        'mS_int': mS_int,
+                        'mS_int': mS,
                         'sn': sn,
                         'indv': this_syllable_df.indv[syll_ind],
                         'label': this_syllable_df.species[syll_ind],
@@ -253,9 +248,9 @@ if __name__ == '__main__':
     # DATASET_ID = 'Bird_all'
     # DATASET_ID = 'Test'
     # DATASET_ID = 'voizo_all'
-    # DATASET_ID = 'voizo-co-ni_segmented'
-    dataset_id = 'voizo_chunks_test_segmented'
-    data_aug = True
+    dataset_id = 'voizo-co-ni_segmented'
+    # dataset_id = 'voizo_chunks_test_segmented'
+    data_aug = False
 
     # Grid search
     debug = True

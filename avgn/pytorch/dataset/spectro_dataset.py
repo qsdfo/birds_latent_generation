@@ -28,6 +28,12 @@ class SpectroDataset(Dataset):
         with open(fname, 'rb') as ff:
             data = pickle.load(ff)
         mSp = data['mS_int']
+
+        raise NotImplementedError("Padding not implemented")
+        # syl_pad = np.zeros((hparams.chunk_len_samples))
+        # pad_left = (hparams.chunk_len_samples - syl_len) // 2
+        # syl_pad[pad_left:pad_left + syl_len] = syl
+
         # conv in pytorch are
         # (batch, channel, height, width)
         sample = SpectroDataset.process_mSp(mSp)
