@@ -121,7 +121,7 @@ def main(dataset_id, data_aug, debug, sr, num_mel_bins, n_fft, chunk_len, mel_lo
         verbosity=1,
     )
     if data_aug:
-        suffix = f'{hparams.__repr__()}_dataAug'
+        suffix = f'dataAug_{hparams.__repr__()}'
     else:
         suffix = f'{hparams.__repr__()}'
 

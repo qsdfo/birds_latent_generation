@@ -5,7 +5,7 @@ from avgn.signalprocessing.create_spectrogram_dataset import prepare_wav
 from main_spectrogramming import process_syllable
 import os
 import shutil
-
+import time
 import click
 from torch.utils.tensorboard import SummaryWriter
 from avgn.pytorch.generate.generation import plot_generation
@@ -49,16 +49,21 @@ def main(config,
             val_dataloader = get_dataloader(dataset_type=config['dataset'], dataset=dataset_val,
                                             batch_size=config['batch_size'], shuffle=True)
 
+            aaa = time.time()
             train_loss = epoch(model, optimizer, train_dataloader,
                                num_batches=config['num_batches'], training=True)
+            bbb = time.time()
             val_loss = epoch(model, optimizer, val_dataloader,
                              num_batches=config['num_batches'], training=False)
+            ccc = time.time()
             writer.add_scalar('train_loss', train_loss, ind_epoch)
             writer.add_scalar('val_loss', val_loss, ind_epoch)
 
             print(f'Epoch {ind_epoch}:')
             print(f'Train loss {train_loss}:')
             print(f'Val loss {val_loss}:')
+            print(f'Train time {bbb-aaa}:')
+            print(f'Valid time {ccc-bbb}:')
 
             del train_dataloader, val_dataloader
 
@@ -73,9 +78,14 @@ def main(config,
                 test_dataloader = get_dataloader(dataset_type=config['dataset'], dataset=dataset_val,
                                                  batch_size=num_examples_plot, shuffle=True)
                 savepath = f'{model.model_dir}/training_plots/{ind_epoch}/reconstructions'
+                if os.path.isdir(savepath):
+                    shutil.rmtree(savepath)
                 os.mkdir(savepath)
-                plot_reconstruction(model, hparams, test_dataloader, savepath, custom_data=None)
+                plot_reconstruction(
+                    model, hparams, test_dataloader, savepath, custom_data=None)
                 savepath = f'{model.model_dir}/training_plots/{ind_epoch}/generations'
+                if os.path.isdir(savepath):
+                    shutil.rmtree(savepath)
                 os.mkdir(savepath)
                 plot_generation(model, hparams, num_examples_plot, savepath)
                 del test_dataloader
@@ -111,9 +121,11 @@ def main(config,
                 sn, mSp, _ = process_syllable(
                     syl=syl, hparams=hparams, mel_basis=mel_basis, debug=False)
                 if name == 'start':
-                    start_data.append(SpectroDataset.process_mSp(mSp))
+                    start_data.append(SpectroDataset.process_mSp(mSp, chunk_len_win=hparams['chunk_len_win'],
+                                                                 num_mel_bins=hparams['num_mel_bins']))
                 elif name == 'end':
-                    end_data.append(SpectroDataset.process_mSp(mSp))
+                    end_data.append(SpectroDataset.process_mSp(mSp, chunk_len_win=hparams['chunk_len_win'],
+                                                               num_mel_bins=hparams['num_mel_bins']))
         all_data = start_data + end_data
         #  Batchify
         start_data = np.stack(start_data)
@@ -139,7 +151,8 @@ def main(config,
     savepath = f'{model.model_dir}/plots/reconstructions'
     if not os.path.isdir(savepath):
         os.mkdir(savepath)
-    plot_reconstruction(model, hparams, gen_dataloader, savepath, custom_data=custom_data)
+    plot_reconstruction(model, hparams, gen_dataloader,
+                        savepath, custom_data=custom_data)
 
     # Sampling
     savepath = f'{model.model_dir}/plots/generations'

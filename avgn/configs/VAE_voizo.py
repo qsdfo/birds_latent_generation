@@ -21,7 +21,7 @@ w_dim = time_dim
 
 config = {
     # --- Dataset ---
-    'dataset': 'voizo_chunks_test_segmented',
+    'dataset': 'dataAug_voizo-co-ni_segmented',
     'dataset_preprocessing': f'sr-{sr}_' \
                              f'wl-{win_length}_' \
                              f'hl-{hop_length}_' \

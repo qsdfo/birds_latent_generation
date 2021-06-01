@@ -8,20 +8,8 @@ def plot_generation(model, hparams, num_examples, savepath):
     model.eval()
     gen = model.generate(batch_dim=num_examples).cpu().detach().numpy()
 
-    # plot
-    dims = gen.shape[2:]
-    plt.clf()
-    fig, axes = plt.subplots(ncols=num_examples)
-    for i in range(num_examples):
-        # show the image
-        axes[i].matshow(gen[i].reshape(dims), origin="lower")
-    for ax in fig.get_axes():
-        ax.set_xticks([])
-        ax.set_yticks([])
-    plt.savefig(f'{savepath}/spectro.pdf')
-    plt.close('all')
-
     # audio
+    dims = gen.shape[2:]
     audios = []
     if hparams is not None:
         mel_basis = build_mel_basis(hparams, hparams.sr, hparams.sr)
@@ -37,6 +25,16 @@ def plot_generation(model, hparams, num_examples, savepath):
                                            )
             audios.append(gen_audio)
             sf.write(f'{savepath}/{i}.wav', gen_audio, samplerate=hparams.sr)
+
+            # plot
+            plt.clf()
+            # show the image
+            plt.matshow(gen[i].reshape(dims), origin="lower")
+            ax = plt.gca()
+            ax.set_xticks([])
+            ax.set_yticks([])
+            plt.savefig(f'{savepath}/{i}_spectro.pdf')
+            plt.close('all')
     return {
         'audios': audios,
         'spectros': gen

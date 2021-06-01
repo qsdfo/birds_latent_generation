@@ -13,6 +13,7 @@ import numpy as np
 import soundfile as sf
 import torch
 
+
 def main(config_path, loading_epoch, source_path, contamination_path, contamination_parameters, method):
     # load model
     model, _, _, _, hparams, _, _, config_path = get_model_and_dataset(
@@ -26,14 +27,16 @@ def main(config_path, loading_epoch, source_path, contamination_path, contaminat
     # load files
     source = {}
     source['path'] = source_path
-    waveform, chunks, start_samples, end_samples = get_chunks(path=source['path'], hparams=hparams)
+    waveform, chunks, start_samples, end_samples = get_chunks(
+        path=source['path'], hparams=hparams)
     source['waveform'] = waveform
     source['chunks'] = chunks
     source['start_samples'] = start_samples
     source['end_samples'] = end_samples
     contamination = {}
     contamination['path'] = contamination_path
-    waveform, chunks, start_samples, end_samples = get_chunks(path=contamination['path'], hparams=hparams)
+    waveform, chunks, start_samples, end_samples = get_chunks(
+        path=contamination['path'], hparams=hparams)
     contamination['waveform'] = waveform
     contamination['chunks'] = chunks
     contamination['start_samples'] = start_samples
@@ -67,7 +70,8 @@ def main(config_path, loading_epoch, source_path, contamination_path, contaminat
         if method == 'linear':
             z_out[batch_ind] = x_z[batch_ind] * (1 - t) + y_z[batch_ind] * t
         elif method == 'constant_radius':
-            z_out[batch_ind] = constant_radius_interpolation(x_z[batch_ind], y_z[batch_ind], t)
+            z_out[batch_ind] = constant_radius_interpolation(
+                x_z[batch_ind], y_z[batch_ind], t)
     # Decode z
     x_recon = model.decode(z_out).cpu().detach().numpy()
 
@@ -94,6 +98,8 @@ def main(config_path, loading_epoch, source_path, contamination_path, contaminat
     sf.write(f'{savepath}/contamination.wav', out_wave, samplerate=hparams.sr)
 
 # Get chunks
+
+
 def get_chunks(path, hparams):
     # mel basis
     mel_basis = build_mel_basis(hparams, hparams.sr, hparams.sr)
@@ -122,7 +128,8 @@ def get_chunks(path, hparams):
         silence_threshold=silence_threshold,
         verbose=True,
         min_syllable_length_s=min_syllable_length_s,
-        spectral_range=[hparams.mel_lower_edge_hertz, hparams.mel_upper_edge_hertz],
+        spectral_range=[hparams.mel_lower_edge_hertz,
+                        hparams.mel_upper_edge_hertz],
     )
     if results is None:
         print('Cannot segment the input file')
@@ -139,11 +146,13 @@ def get_chunks(path, hparams):
         syl = x_s[start_sample:end_sample]
 
         # To avoid mistakes, reproduce the whole preprocessing pipeline, even (here useless) int casting
-        _, mS, _ = process_syllable(syl, hparams, mel_basis=mel_basis, debug=False)
+        _, mS, _ = process_syllable(
+            syl, hparams, mel_basis=mel_basis, debug=False)
         if mS is None:
             continue
         mS_int = (mS * 255).astype('uint8')
-        sample = SpectroDataset.process_mSp(mS_int)
+        sample = SpectroDataset.process_mSp(mS_int, chunk_len_win=hparams['chunk_len_win'],
+                                            num_mel_bins=hparams['num_mel_bins'])
 
         chunks_mS.append(sample)
         start_samples.append(start_sample)

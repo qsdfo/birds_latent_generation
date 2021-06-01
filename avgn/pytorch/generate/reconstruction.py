@@ -18,22 +18,10 @@ def plot_reconstruction(model, hparams, dataloader, savepath, custom_data):
         x_orig = custom_data['all_data']
         x_cuda = cuda_variable(torch.tensor(custom_data['all_data']))
         x_recon = model.reconstruct(x_cuda).cpu().detach().numpy()
-    # Plot
-    dims = x_recon.shape[2:]
-    num_examples = x_recon.shape[0]
-    plt.clf()
-    fig, axes = plt.subplots(nrows=2, ncols=num_examples)
-    for i in range(num_examples):
-        # show the image
-        axes[0, i].matshow(x_orig[i].reshape(dims), origin="lower")
-        axes[1, i].matshow(x_recon[i].reshape(dims), origin="lower")
-    for ax in fig.get_axes():
-        ax.set_xticks([])
-        ax.set_yticks([])
-    plt.savefig(f'{savepath}/spectro.pdf')
-    plt.close('all')
 
-    # audio
+    # audio and plots
+    num_examples = x_recon.shape[0]
+    dims = x_recon.shape[2:]
     original_audios = []
     reconstruction_audios = []
     if hparams is not None:
@@ -58,6 +46,18 @@ def plot_reconstruction(model, hparams, dataloader, savepath, custom_data):
 
             original_audios.append(original_audio)
             reconstruction_audios.append(recon_audio)
+
+            # Plot
+            plt.clf()
+            fig, axes = plt.subplots(nrows=1, ncols=2)
+            # show the image
+            axes[0].matshow(x_orig[i].reshape(dims), origin="lower")
+            axes[1].matshow(x_recon[i].reshape(dims), origin="lower")
+            for ax in fig.get_axes():
+                ax.set_xticks([])
+                ax.set_yticks([])
+            plt.savefig(f'{savepath}/{i}_spectro.pdf')
+            plt.close('all')
     return {
         'original_audios': original_audios,
         'reconstruction_audios': reconstruction_audios,

@@ -99,8 +99,22 @@ def get_model_and_dataset(config, loading_epoch):
         # Hparams
         hparams_loc = DATA_DIR / 'syllables' / \
             f'{dataset_name}_{config["dataset_preprocessing"]}_hparams.pkl'
-        with open(hparams_loc, 'rb') as ff:
-            hparams = pickle.load(ff)
+        try:
+            with open(hparams_loc, 'rb') as ff:
+                hparams = pickle.load(ff)
+        except:
+            from avgn.utils.hparams import HParams
+            hparams = HParams(sr=44100, n_fft=512, win_length_samples=512, hop_length_samples=128,
+                              ref_level_db=-35, preemphasis=0.97, num_mel_bins=64, power=1.5,
+                              mel_lower_edge_hertz=500, mel_upper_edge_hertz=16000, butter_lowcut=500,
+                              butter_highcut=16000, reduce_noise=True,
+                              noise_reduce_kwargs={
+                                  'n_std_thresh': 2.0, 'prop_decrease': 0.8},
+                              mask_spec=False,
+                              mask_spec_kwargs={
+                                  'spec_thresh': 0.9, 'offset': 1e-10},
+                              n_jobs=1, verbosity=1,
+                              chunk_len_samples=33152, chunk_len_win=256, chunk_len_ms=751.7460317460317)
 
         # data
         data_loc = DATA_DIR / 'syllables' / \
@@ -118,8 +132,8 @@ def get_model_and_dataset(config, loading_epoch):
             dataset_train = SingDataset(syllable_paths_train)
             dataset_val = SingDataset(syllable_paths_val)
         elif config['model_type'] == 'VAE':
-            dataset_train = SpectroDataset(syllable_paths_train)
-            dataset_val = SpectroDataset(syllable_paths_val)
+            dataset_train = SpectroDataset(syllable_paths_train, hparams.chunk_len_win, hparams.num_mel_bins)
+            dataset_val = SpectroDataset(syllable_paths_val, hparams.chunk_len_win, hparams.num_mel_bins)
             # dataset_train = SpectroCategoricalDataset(syllable_df_train)
             # dataset_val = SpectroCategoricalDataset(syllable_df_val)
         else:
