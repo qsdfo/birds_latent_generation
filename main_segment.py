@@ -26,7 +26,8 @@ def main():
     Need careful tweaking of these five parameters to find the optimal automatic segmentation...
     """
     # DATASET_ID = 'voizo_chunks_Nigthingale'
-    DATASET_ID = 'voizo_chunks_Corvus'
+    # DATASET_ID = 'voizo_chunks_Corvus'
+    DATASET_ID = 'du-ra-mo-ni-ro'
     # DATASET_ID = 'voizo_chunks_test'
     # create a unique datetime identifier
     DT_ID = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
