@@ -68,11 +68,11 @@ config = {
             nn.ReLU(),
             nn.Dropout(p=0.1),
         ],
-        deconv_stack=[  # (b, 256, 2, 15)
-            nn.ConvTranspose2d(deconv_input_shape[0], 256, (1, 2), stride=(1, 2), output_padding=1),  # (b, 256, 3, 31)
-            nn.ConvTranspose2d(deconv_input_shape[0], 256, (2, 2), stride=(2, 2), output_padding=1),  # (b, 256, 7, 63)
-            nn.ConvTranspose2d(deconv_input_shape[0], 256, (2, 2), stride=(2, 2), output_padding=1),  # (b, 256, 15, 127)
-            nn.ConvTranspose2d(256, 256, (2, 2), stride=(2, 2)),  # (, , 30, 254)
+        deconv_stack=[  # (b, 256, 2, 7)
+            nn.ConvTranspose2d(deconv_input_shape[0], 256, (1, 2), stride=(1, 2)),  # (b, 256, 2, 14)
+            nn.ConvTranspose2d(deconv_input_shape[0], 256, (3, 3), stride=(3, 3)),  # (b, 256, 6, 42)
+            nn.ConvTranspose2d(256, 256, (4, 3), stride=(2, 3)),  # (b, 256, 14, 126)
+            nn.ConvTranspose2d(256, 256, (4, 4), stride=(2, 2)),  # (, , 30, 254)
             nn.ConvTranspose2d(256, 256, (4, 4), stride=(2, 2), output_padding=1),  # (, , 63, 511)
             nn.ConvTranspose2d(256, 256, (4, 4), stride=(2, 2)),  # (, , 128, 1024)
             nn.ConvTranspose2d(256, 1, (1, 1), stride=(1, 1))
