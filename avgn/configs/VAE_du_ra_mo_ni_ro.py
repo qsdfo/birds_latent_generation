@@ -64,7 +64,7 @@ config = {
         ],
         deconv_stack=[  # (b, 256, 2, 7)
             nn.ConvTranspose2d(deconv_input_shape[0], 256, (1, 2), stride=(1, 2)),  # (b, 256, 2, 14)
-            nn.ConvTranspose2d(deconv_input_shape[0], 256, (3, 3), stride=(3, 3)),  # (b, 256, 6, 42)
+            nn.ConvTranspose2d(256, 256, (3, 3), stride=(3, 3)),  # (b, 256, 6, 42)
             nn.ConvTranspose2d(256, 256, (4, 3), stride=(2, 3)),  # (b, 256, 14, 126)
             nn.ConvTranspose2d(256, 256, (4, 4), stride=(2, 2)),  # (, , 30, 254)
             nn.ConvTranspose2d(256, 256, (4, 4), stride=(2, 2), output_padding=1),  # (, , 63, 511)
@@ -79,7 +79,7 @@ config = {
     # ======== Training ========
     'lr': 1e-4,
     'batch_size': 8,
-    'num_batches': 1024,
+    'num_batches': 8,
     'num_epochs': 500000,
 
     # ======== model ID ========
