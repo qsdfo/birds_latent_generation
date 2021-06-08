@@ -99,6 +99,7 @@ def get_model_and_dataset(config, loading_epoch):
         # Hparams
         hparams_loc = DATA_DIR / 'syllables' / \
             f'{dataset_name}_{config["dataset_preprocessing"]}_hparams.pkl'
+        print(hparams_loc)
         try:
             with open(hparams_loc, 'rb') as ff:
                 hparams = pickle.load(ff)
