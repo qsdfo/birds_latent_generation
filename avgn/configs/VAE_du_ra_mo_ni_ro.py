@@ -15,7 +15,7 @@ mel_upper_edge_hertz = 20000
 
 #  Model
 n_z = 32
-deconv_input_shape = (256, 2, 8)  # (num_channel, x_dim_latent, y_dim_latent)
+deconv_input_shape = (256, 2, 15)  # (num_channel, x_dim_latent, y_dim_latent)
 h_dim = num_mel_bins
 w_dim = time_dim
 
@@ -68,12 +68,13 @@ config = {
             nn.ReLU(),
             nn.Dropout(p=0.1),
         ],
-        deconv_stack=[  # (b, 256, 2, 8)
-            nn.ConvTranspose2d(deconv_input_shape[0], 256, (4, 4), stride=(4, 4)),  # (b, 256, 8, 32)
-            nn.ConvTranspose2d(256, 256, (4, 4), stride=(2, 2)),  # (, , 16, 64)
-            nn.ConvTranspose2d(256, 256, (4, 4), stride=(2, 2)),  # (, , 32, 128)
-            nn.ConvTranspose2d(256, 256, (4, 4), stride=(2, 2)),  # (, , 64, 256)
-            nn.ConvTranspose2d(256, 256, (4, 4), stride=(2, 4)),  # (, , 128, 1024)
+        deconv_stack=[  # (b, 256, 2, 15)
+            nn.ConvTranspose2d(deconv_input_shape[0], 256, (1, 2), stride=(1, 2), output_padding=1),  # (b, 256, 3, 31)
+            nn.ConvTranspose2d(deconv_input_shape[0], 256, (2, 2), stride=(2, 2), output_padding=1),  # (b, 256, 7, 63)
+            nn.ConvTranspose2d(deconv_input_shape[0], 256, (2, 2), stride=(2, 2), output_padding=1),  # (b, 256, 15, 127)
+            nn.ConvTranspose2d(256, 256, (2, 2), stride=(2, 2)),  # (, , 30, 254)
+            nn.ConvTranspose2d(256, 256, (4, 4), stride=(2, 2), output_padding=1),  # (, , 63, 511)
+            nn.ConvTranspose2d(256, 256, (4, 4), stride=(2, 2)),  # (, , 128, 1024)
             nn.ConvTranspose2d(256, 1, (1, 1), stride=(1, 1))
         ]
     ),
