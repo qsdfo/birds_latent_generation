@@ -69,11 +69,11 @@ config = {
             nn.Dropout(p=0.1),
         ],
         deconv_stack=[  # (b, 256, 2, 8)
-            nn.ConvTranspose2d(deconv_input_shape[0], 256, (4, 4), stride=(4, 4)),  # (b, 256, 4, 32)
-            nn.ConvTranspose2d(256, 256, (4, 4), stride=(2, 2)),  # (, , 8, 64)
-            nn.ConvTranspose2d(256, 256, (4, 4), stride=(2, 2)),  # (, , 16, 128)
-            nn.ConvTranspose2d(256, 256, (4, 4), stride=(2, 2)),  # (, , 32, 256)
-            nn.ConvTranspose2d(256, 256, (4, 4), stride=(2, 2)),  # (, , 64, 512)
+            nn.ConvTranspose2d(deconv_input_shape[0], 256, (4, 4), stride=(4, 4)),  # (b, 256, 8, 32)
+            nn.ConvTranspose2d(256, 256, (4, 4), stride=(2, 2)),  # (, , 16, 64)
+            nn.ConvTranspose2d(256, 256, (4, 4), stride=(2, 2)),  # (, , 32, 128)
+            nn.ConvTranspose2d(256, 256, (4, 4), stride=(2, 2)),  # (, , 64, 256)
+            nn.ConvTranspose2d(256, 256, (4, 4), stride=(2, 4)),  # (, , 128, 1024)
             nn.ConvTranspose2d(256, 1, (1, 1), stride=(1, 1))
         ]
     ),
