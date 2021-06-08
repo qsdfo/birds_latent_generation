@@ -49,21 +49,21 @@ def main(config,
             val_dataloader = get_dataloader(dataset_type=config['dataset'], dataset=dataset_val,
                                             batch_size=config['batch_size'], shuffle=True)
 
-            aaa = time.time()
+            # aaa = time.time()
             train_loss = epoch(model, optimizer, train_dataloader,
                                num_batches=config['num_batches'], training=True)
-            bbb = time.time()
+            # bbb = time.time()
             val_loss = epoch(model, optimizer, val_dataloader,
                              num_batches=config['num_batches'], training=False)
-            ccc = time.time()
+            # ccc = time.time()
             writer.add_scalar('train_loss', train_loss, ind_epoch)
             writer.add_scalar('val_loss', val_loss, ind_epoch)
 
             print(f'Epoch {ind_epoch}:')
             print(f'Train loss {train_loss}:')
             print(f'Val loss {val_loss}:')
-            print(f'Train time {bbb-aaa}:')
-            print(f'Valid time {ccc-bbb}:')
+            # print(f'Train time {bbb-aaa}:')
+            # print(f'Valid time {ccc-bbb}:')
 
             del train_dataloader, val_dataloader
 
