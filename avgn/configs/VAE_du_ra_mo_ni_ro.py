@@ -4,8 +4,8 @@ from torch import nn
 
 # Spectros
 sr = 44100
-num_mel_bins = 64
-time_dim = 256
+num_mel_bins = 128
+time_dim = 1024
 win_length = 1024
 hop_length = 32
 n_fft = 1024
