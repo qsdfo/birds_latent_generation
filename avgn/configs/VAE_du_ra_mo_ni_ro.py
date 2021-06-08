@@ -15,7 +15,7 @@ mel_upper_edge_hertz = 20000
 
 #  Model
 n_z = 32
-deconv_input_shape = (256, 2, 15)  # (num_channel, x_dim_latent, y_dim_latent)
+deconv_input_shape = (256, 2, 7)  # (num_channel, x_dim_latent, y_dim_latent)
 h_dim = num_mel_bins
 w_dim = time_dim
 
@@ -43,13 +43,10 @@ config = {
         ],
         conv2z=[
             nn.Linear(in_features=(h_dim // (2 ** 4)) * \
-                      (w_dim // (2 ** 4)) * 256, out_features=2048),
+                      (w_dim // (2 ** 4)) * 256, out_features=1024),
             nn.ReLU(),
             nn.Dropout(p=0.1),
-            nn.Linear(in_features=2048, out_features=512),
-            nn.ReLU(),
-            nn.Dropout(p=0.1),
-            nn.Linear(in_features=512, out_features=n_z * 2)
+            nn.Linear(in_features=1024, out_features=n_z * 2)
         ],
     ),
     # Formula for deconv shape WITH NO DILATION = out_dim = in_dim * stride + (k_size - stride)
@@ -57,13 +54,10 @@ config = {
     'decoder_kwargs': dict(
         deconv_input_shape=deconv_input_shape,
         z2deconv=[
-            nn.Linear(in_features=n_z, out_features=512),
+            nn.Linear(in_features=n_z, out_features=1024),
             nn.ReLU(),
             nn.Dropout(p=0.1),
-            nn.Linear(in_features=512, out_features=2048),
-            nn.ReLU(),
-            nn.Dropout(p=0.1),
-            nn.Linear(in_features=2048, out_features=int(
+            nn.Linear(in_features=1024, out_features=int(
                 np.prod(deconv_input_shape))),
             nn.ReLU(),
             nn.Dropout(p=0.1),
