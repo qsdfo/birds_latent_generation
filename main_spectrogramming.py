@@ -52,9 +52,9 @@ def process_syllable(syl, hparams, mel_basis, debug):
 
 
 def main(dataset_id, data_aug, debug, sr, num_mel_bins, n_fft, chunk_len, mel_lower_edge_hertz, mel_upper_edge_hertz,
-         hop_length_ms, win_length_ms, ref_level_db, power):
+         hop_length, win_length, ref_level_db, power):
 
-    ind_examples = [0, 10, 20, 50, 100, 250, 500, 750]
+    ind_examples = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 250, 500, 750]
 
     # Data augmentations
     if data_aug:
@@ -65,14 +65,10 @@ def main(dataset_id, data_aug, debug, sr, num_mel_bins, n_fft, chunk_len, mel_lo
         pitch_shifts = [0]
 
     # STFT time parameters
-    if win_length_ms is None:
+    if win_length is None:
         win_length = n_fft
-    else:
-        win_length = ms_to_sample(win_length_ms, sr)
-    if hop_length_ms is None:
+    if hop_length is None:
         hop_length = win_length // 4
-    else:
-        hop_length = ms_to_sample(hop_length_ms, sr)
 
     ################################################################################
     if chunk_len['type'] == 'ms':
@@ -248,40 +244,50 @@ if __name__ == '__main__':
     # DATASET_ID = 'Bird_all'
     # DATASET_ID = 'Test'
     # DATASET_ID = 'voizo_all'
-    dataset_id = 'voizo-co-ni_segmented'
+    # dataset_id = 'voizo-co-ni_segmented'
     # dataset_id = 'voizo_chunks_test_segmented'
+    dataset_id = 'du-ra-mo-ni-ro_segmented'
     data_aug = True
 
     # Grid search
     debug = True
     # sr: 44100 for spec-based models, 16000 for sample-based models
-    sr_l = [44100]
-    num_mel_bins_l = [64]
-    # there is not much low frequencies, probably a relatively small value is better for better temporal resolution
-    # 512, but if sr is 16k, we can use a smaller n_fft like 128
-    n_fft_l = [512]
-    # lowest freq = sr / n_fft does not need to be lower
-    # than mel_lower_eddge + gain temporal resolution, but increases number of frames in th STFT.... tradeoff!!
-    mel_lower_edge_hertz_l = [500]
-    mel_upper_edge_hertz_l = [16000]
-    hop_length_ms_l = [None]
-    win_length_ms_l = [None]
-    power_l = [1.5]
-    ref_level_db_l = [-35]
-    # Chunk length can be set either in ms, samples or stft_win
+    # sr_l = [44100]
+    # num_mel_bins_l = [64]
+    # # there is not much low frequencies, probably a relatively small value is better for better temporal resolution
+    # # 512, but if sr is 16k, we can use a smaller n_fft like 128
+    # n_fft_l = [512]
+    # # lowest freq = sr / n_fft does not need to be lower
+    # # than mel_lower_eddge + gain temporal resolution, but increases number of frames in th STFT.... tradeoff!!
+    # mel_lower_edge_hertz_l = [500]
+    # mel_upper_edge_hertz_l = [16000]
+    # hop_length_l = [128]
+    # win_length_l = [512]
+    # power_l = [1.5]
+    # ref_level_db_l = [-15]
     # chunk_len = {
-    #     'type': 'ms',
-    #     'value': 1000
+    #     'type': 'stft_win',
+    #     'value': 256
     # }
+
+    sr_l = [44100]
+    num_mel_bins_l = [128]
+    n_fft_l = [1024]
+    mel_lower_edge_hertz_l = [500]
+    mel_upper_edge_hertz_l = [20000]
+    hop_length_l = [32]
+    win_length_l = [1024]
+    power_l = [1.5]
+    ref_level_db_l = [-15]
     chunk_len = {
         'type': 'stft_win',
-        'value': 256
+        'value': 1024
     }
 
-    for sr, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz, hop_length_ms, \
-        win_length_ms, ref_level_db, power in \
+    for sr, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz, hop_length, \
+        win_length, ref_level_db, power in \
             itertools.product(sr_l, num_mel_bins_l, n_fft_l, mel_lower_edge_hertz_l, mel_upper_edge_hertz_l,
-                              hop_length_ms_l, win_length_ms_l, ref_level_db_l, power_l):
+                              hop_length_l, win_length_l, ref_level_db_l, power_l):
         main(dataset_id=dataset_id,
              data_aug=data_aug,
              debug=debug,
@@ -291,8 +297,8 @@ if __name__ == '__main__':
              chunk_len=chunk_len,
              mel_lower_edge_hertz=mel_lower_edge_hertz,
              mel_upper_edge_hertz=mel_upper_edge_hertz,
-             hop_length_ms=hop_length_ms,
-             win_length_ms=win_length_ms,
+             hop_length=hop_length,
+             win_length=win_length,
              ref_level_db=ref_level_db,
              power=power,
              )
