@@ -21,7 +21,7 @@ w_dim = time_dim
 
 config = {
     # --- Dataset ---
-    'dataset': 'du_ra_mo_ni_ro_segmented_dataAug',
+    'dataset': 'du-ra-mo-ni-ro_segmented_dataAug',
     'dataset_preprocessing': f'sr-{sr}_' \
                              f'wl-{win_length}_' \
                              f'hl-{hop_length}_' \
