@@ -69,12 +69,11 @@ config = {
             nn.Dropout(p=0.1),
         ],
         deconv_stack=[  # (b, 256, 2, 8)
-            nn.ConvTranspose2d(deconv_input_shape[0], 256, (2, 2), stride=(2, 2)),  # (b, 256, 4, 32)
+            nn.ConvTranspose2d(deconv_input_shape[0], 256, (4, 4), stride=(4, 4)),  # (b, 256, 4, 32)
             nn.ConvTranspose2d(256, 256, (4, 4), stride=(2, 2)),  # (, , 8, 64)
             nn.ConvTranspose2d(256, 256, (4, 4), stride=(2, 2)),  # (, , 16, 128)
             nn.ConvTranspose2d(256, 256, (4, 4), stride=(2, 2)),  # (, , 32, 256)
             nn.ConvTranspose2d(256, 256, (4, 4), stride=(2, 2)),  # (, , 64, 512)
-            nn.ConvTranspose2d(256, 256, (4, 4), stride=(2, 2)),  # (, , 128, 1024)
             nn.ConvTranspose2d(256, 1, (1, 1), stride=(1, 1))
         ]
     ),
@@ -84,7 +83,7 @@ config = {
 
     # ======== Training ========
     'lr': 1e-4,
-    'batch_size': 32,
+    'batch_size': 16,
     'num_batches': 1024,
     'num_epochs': 500000,
 
