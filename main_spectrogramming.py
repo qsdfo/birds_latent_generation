@@ -122,7 +122,7 @@ def main(dataset_id, data_aug, debug, sr, num_mel_bins, n_fft, chunk_len, mel_lo
         suffix = f'{hparams.__repr__()}'
 
     if debug:
-        dump_folder = f'dump/{suffix}'
+        dump_folder = f'dump/{dataset_id}_{suffix}'
         if os.path.isdir(dump_folder):
             shutil.rmtree(dump_folder)
         os.makedirs(dump_folder)
@@ -271,17 +271,17 @@ if __name__ == '__main__':
     # }
 
     sr_l = [44100]
-    num_mel_bins_l = [128]
-    n_fft_l = [1024]
+    num_mel_bins_l = [64]
+    n_fft_l = [512]
     mel_lower_edge_hertz_l = [500]
     mel_upper_edge_hertz_l = [20000]
-    hop_length_l = [32]
-    win_length_l = [1024]
+    hop_length_l = [128]
+    win_length_l = [512]
     power_l = [1.5]
-    ref_level_db_l = [-15]
+    ref_level_db_l = [-24]
     chunk_len = {
         'type': 'stft_win',
-        'value': 1024
+        'value': 256
     }
 
     for sr, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz, hop_length, \

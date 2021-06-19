@@ -1,13 +1,11 @@
 # Contamination
 from avgn.utils.get_chunks import get_chunks
-import IPython.display as ipd
 import math
 import shutil
 import librosa
 import torch
 import soundfile as sf
 import numpy as np
-import matplotlib.pyplot as plt
 from avgn.utils.cuda_variable import cuda_variable
 from avgn.pytorch.generate.interpolation import constant_radius_interpolation
 import random
@@ -18,10 +16,11 @@ from avgn.signalprocessing.spectrogramming_scipy import _db_to_amplitude, _denor
 
 
 # Set model and material
-config_path = "models/VAE_voizo_ROBIN/config.py"
-loading_epoch = 740
-source_path = '/home/leo/Code/birds_latent_generation/data/raw/generations/0/shortmediummocking.wav'
-contamination_path = '/home/leo/Code/birds_latent_generation/data/raw/generations/0/shortmediummocking-raven-AG.wav'
+config_path = "models/VAE_MMD_du_ra_mo_ni_ro_2021-06-13_22-03-24/config.py"
+loading_epoch = 1080
+source_path = '/home/syrinx/birds_latent_generation/data/audioguide/shortmediummocking.wav'
+contamination_path = '/home/syrinx/birds_latent_generation/data/audioguide/shortmediummocking-raven-AG.wav'
+max_batch_size = 4
 
 contamination_parameters = {
     'p_contamination': 1.0, 'contam_degree': 1.0,
@@ -72,7 +71,7 @@ for index, chunk in enumerate(source['chunks']):
 
         # Select contamination
         # 1/ choose (randomly?) a contaminating syllable
-#        ys.append(random.choice(contamination['chunks']))
+        # ys.append(random.choice(contamination['chunks']))
         # 2/ choose the contamination chunk with the same index as the source chunk
         # (because they're aligned with audioguide)
         # ys.append(contamination['chunks'][index])
@@ -88,23 +87,28 @@ for index, chunk in enumerate(source['chunks']):
         ys.append(contamination['chunks'][index_contam_selected])
 xs_cuda = cuda_variable(torch.tensor(np.stack(xs)))
 ys_cuda = cuda_variable(torch.tensor(np.stack(ys)))
+print(f'Encode {len(xs_cuda)} source syllables and {len(ys_cuda)} contam syllables')
 
 # Encode
-mu, logvar = model.encode(xs_cuda)
-x_z = model.reparameterize(mu, logvar)
-mu, logvar = model.encode(ys_cuda)
-y_z = model.reparameterize(mu, logvar)
-z_out = torch.zeros_like(x_z)
-
-# Contaminate
-for batch_ind, t in enumerate(contamination_degrees):
-    if method == 'linear':
-        z_out[batch_ind] = x_z[batch_ind] * (1 - t) + y_z[batch_ind] * t
-    elif method == 'constant_radius':
-        z_out[batch_ind] = constant_radius_interpolation(
-            x_z[np.newaxis, batch_ind], y_z[np.newaxis, batch_ind], t)
-# Decode z
-x_recon = model.decode(z_out).cpu().detach().numpy()
+num_chunks_source = len(xs_cuda) // max_batch_size + 1
+x_recon_l = []
+batch_ind = 0
+for xs_b, ys_b in zip(torch.chunk(xs_cuda, num_chunks_source, dim=0), torch.chunk(ys_cuda, num_chunks_source, dim=0)):
+    x_z = model.reparameterize(*model.encode(xs_b))
+    y_z = model.reparameterize(*model.encode(ys_b))
+    z_out = torch.zeros_like(x_z)
+    # Contaminate
+    for b_ind in range(len(xs_b)):
+        t = contamination_degrees[batch_ind]
+        if method == 'linear':
+            z_out[b_ind] = x_z[b_ind] * (1 - t) + y_z[b_ind] * t
+        elif method == 'constant_radius':
+            z_out[b_ind] = constant_radius_interpolation(
+                x_z[np.newaxis, b_ind], y_z[np.newaxis, b_ind], t)
+        batch_ind += 1
+    # Decode z
+    x_recon_l.append(model.decode(z_out).cpu().detach().numpy())
+x_recon = np.concatenate(x_recon_l)
 
 # Test encode and decode source chunks
 mel_basis = build_mel_basis(hparams, hparams.sr, hparams.sr)

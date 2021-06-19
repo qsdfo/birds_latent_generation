@@ -16,7 +16,7 @@ from avgn.utils.paths import DATA_DIR
 def calibrate_db(sr, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_edge_hertz, hop_length, win_length,
                  power, ref_level_db, dataset_loc):
 
-    wavs = glob.glob(f'{dataset_loc}/*/*/*.wav')
+    wavs = glob.glob(f'{dataset_loc}/*.wav')
     min_db = 100000
     max_db = -100000
     for wav_loc in wavs:
@@ -100,12 +100,12 @@ def calibrate_db_file(sr, num_mel_bins, n_fft, mel_lower_edge_hertz, mel_upper_e
 if __name__ == '__main__':
     # Grid search
     sr = 44100
-    num_mel_bins = 128
-    n_fft = 1024
+    num_mel_bins = 64
+    n_fft = 512
     mel_lower_edge_hertz = 500
     mel_upper_edge_hertz = 20000
-    hop_length = 32
-    win_length = 1024
+    hop_length = 128
+    win_length = 512
     power = 1.5
     ref_level_db = 0
     # dataset_loc = '/home/leo/Code/birds_latent_generation/data/raw/voizo_chunks'

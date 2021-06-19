@@ -11,19 +11,13 @@ class Deconv_stack(nn.Module):
     Uses positional embeddings
     """
 
-    def __init__(self, deconv_input_shape, z2deconv, deconv_stack, n_z):
+    def __init__(self, deconv_input_shape, z2deconv, deconv_stack, n_z, output_shape=None):
         super(Deconv_stack, self).__init__()
         self.n_z = n_z
         self.deconv_input_shape = deconv_input_shape
-
-        # prod_deconv_input_shape = int(np.prod(deconv_input_shape))
-        # self.to_deconv_stack = nn.Sequential(
-        #     nn.Linear(in_features=n_z, out_features=prod_deconv_input_shape),
-        #     nn.ReLU()
-        # )
-
         self.z2deconv = nn.Sequential(*z2deconv)
         self.deconv_stack = nn.ModuleList(deconv_stack)
+        self.output_shape = output_shape
         return
 
     def forward(self, z):
@@ -36,5 +30,7 @@ class Deconv_stack(nn.Module):
             y = self.deconv_stack[layer](y)
             y = F.relu(y)
         y = self.deconv_stack[-1](y)
+        if self.output_shape is not None:
+            y = y[:, :, :self.output_shape[0], :self.output_shape[1]]
         x = torch.sigmoid(y)
         return x

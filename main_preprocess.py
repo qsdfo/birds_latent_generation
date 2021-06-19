@@ -24,6 +24,7 @@ def main():
 
     dataset_path = Path(f'{DATA_DIR}/raw/{DATASET_ID}')
     wavs = set((dataset_path).expanduser().glob('**/*.wav'))
+    print(wavs)
 
     for wf in wavs:
         if song_db is not None:

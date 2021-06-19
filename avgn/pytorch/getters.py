@@ -15,6 +15,7 @@ from torchvision import datasets, transforms
 
 from avgn.pytorch.model.VAE import VAE
 from avgn.pytorch.model.VAE_categorical import VAE_categorical
+from avgn.pytorch.model.VAE_MMD import VAE_MMD
 
 
 def get_model(model_type, model_kwargs, encoder, decoder, model_dir):
@@ -23,7 +24,11 @@ def get_model(model_type, model_kwargs, encoder, decoder, model_dir):
                    decoder=decoder,
                    beta=model_kwargs['beta'],
                    model_dir=model_dir)
-    if model_type == 'VAE_categorical':
+    elif model_type == 'VAE_MMD':
+        return VAE_MMD(encoder=encoder,
+                   decoder=decoder,
+                   model_dir=model_dir)
+    elif model_type == 'VAE_categorical':
         return VAE_categorical(encoder=encoder,
                                decoder=decoder,
                                beta=model_kwargs['beta'],
@@ -132,7 +137,7 @@ def get_model_and_dataset(config, loading_epoch):
         if config['model_type'] == 'SING':
             dataset_train = SingDataset(syllable_paths_train)
             dataset_val = SingDataset(syllable_paths_val)
-        elif config['model_type'] == 'VAE':
+        elif config['model_type'] in ['VAE', 'VAE_MMD']:
             dataset_train = SpectroDataset(syllable_paths_train, hparams.chunk_len_win, hparams.num_mel_bins)
             dataset_val = SpectroDataset(syllable_paths_val, hparams.chunk_len_win, hparams.num_mel_bins)
             # dataset_train = SpectroCategoricalDataset(syllable_df_train)
@@ -153,7 +158,8 @@ def get_model_and_dataset(config, loading_epoch):
         deconv_input_shape=decoder_kwargs['deconv_input_shape'],
         z2deconv=decoder_kwargs['z2deconv'],
         deconv_stack=decoder_kwargs['deconv_stack'],
-        n_z=config['n_z']
+        n_z=config['n_z'],
+        output_shape=(hparams.num_mel_bins, hparams.chunk_len_win)
     )
     model = get_model(
         model_type=config['model_type'],
