@@ -4,18 +4,18 @@ from torch import nn
 
 # Spectros
 sr = 44100
-num_mel_bins = 128
-time_dim = 1024
-win_length = 1024
-hop_length = 32
-n_fft = 1024
-chunkls = 33760
+num_mel_bins = 64
+time_dim = 256
+win_length = 512
+hop_length = 128
+n_fft = 512
+chunkls = 33152
 mel_lower_edge_hertz = 500
 mel_upper_edge_hertz = 20000
 
 #  Model
-n_z = 32
-deconv_input_shape = (256, 2, 7)  # (num_channel, x_dim_latent, y_dim_latent)
+n_z = 16
+deconv_input_shape = (256, 2, 5)  # (num_channel, x_dim_latent, y_dim_latent)
 h_dim = num_mel_bins
 w_dim = time_dim
 
@@ -62,13 +62,33 @@ config = {
             nn.ReLU(),
             nn.Dropout(p=0.1),
         ],
-        deconv_stack=[  # (b, 256, 2, 7)
-            nn.ConvTranspose2d(deconv_input_shape[0], 256, (1, 2), stride=(1, 2)),  # (b, 256, 2, 14)
-            nn.ConvTranspose2d(256, 256, (3, 3), stride=(3, 3)),  # (b, 256, 6, 42)
-            nn.ConvTranspose2d(256, 256, (4, 3), stride=(2, 3)),  # (b, 256, 14, 126)
-            nn.ConvTranspose2d(256, 256, (4, 4), stride=(2, 2)),  # (, , 30, 254)
-            nn.ConvTranspose2d(256, 256, (4, 4), stride=(2, 2), output_padding=1),  # (, , 63, 511)
-            nn.ConvTranspose2d(256, 256, (4, 4), stride=(2, 2)),  # (, , 128, 1024)
+        deconv_stack=[  # (b, 256, 1, 8)
+            # nn.ConvTranspose2d(deconv_input_shape[0], 256, (1, 2), stride=(1, 2)),  # (b, 256, 2, 14)
+            # nn.ConvTranspose2d(256, 256, (3, 3), stride=(3, 3)),  # (b, 256, 6, 42)
+            # nn.ConvTranspose2d(256, 256, (4, 3), stride=(2, 3)),  # (b, 256, 14, 126)
+            # nn.ConvTranspose2d(256, 256, (4, 4), stride=(2, 2)),  # (, , 30, 254)
+            # nn.ConvTranspose2d(256, 256, (4, 4), stride=(2, 2), output_padding=1),  # (, , 63, 511)
+            # nn.ConvTranspose2d(256, 256, (4, 4), stride=(2, 2)),  # (, , 128, 1024)
+            # nn.ConvTranspose2d(256, 1, (1, 1), stride=(1, 1))
+            #
+            # nn.ConvTranspose2d(deconv_input_shape[0], 256, (2, 2), stride=(2, 2)),  # (b, 64, 14, 30)
+            # nn.ConvTranspose2d(256, 256, (4, 4), stride=(2, 2), output_padding=1),  # (, , 31, 63)
+            # nn.ConvTranspose2d(256, 256, (4, 4), stride=(2, 2)),  # (, , 64, 128)
+            # nn.ConvTranspose2d(256, 256, (1, 2), stride=(1, 2)),  # (, , 64, 256)
+            # nn.ConvTranspose2d(256, 1, (1, 1), stride=(1, 1))
+            #
+            # # (, , 2, 5) -> (, , 4, 20)
+            nn.ConvTranspose2d(
+                deconv_input_shape[0], 256, (2, 4), stride=(2, 4)),
+            nn.ConvTranspose2d(256, 256, (2, 2), stride=(1, 1)),  # (, , 5, 21)
+            nn.ConvTranspose2d(
+                256, 256, (3, 3), stride=(3, 3)),  # (, , 15, 63)
+            nn.ConvTranspose2d(
+                256, 256, (2, 2), stride=(1, 1)),  # (, , 16, 64)
+            nn.ConvTranspose2d(
+                256, 256, (2, 2), stride=(2, 2)),  # (, , 32, 128)
+            nn.ConvTranspose2d(
+                256, 256, (2, 2), stride=(2, 2)),  # (, , 64, 256)
             nn.ConvTranspose2d(256, 1, (1, 1), stride=(1, 1))
         ]
     ),

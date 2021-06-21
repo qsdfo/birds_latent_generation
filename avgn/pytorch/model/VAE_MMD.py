@@ -1,6 +1,7 @@
 import os
 import torch
 import torch.nn as nn
+from torch.nn import functional as F
 
 from avgn.utils.cuda_variable import cuda_variable
 
@@ -64,11 +65,12 @@ class VAE_MMD(nn.Module):
         x = self.decode(z)
         return x
 
-    # Reconstruction + KL divergence losses summed over all elements and batch
     @staticmethod
     def loss_mmd(recon_x, x, z):
-        loss = (recon_x-x).pow(2).mean() + MMD(torch.randn(200,
-                                                          z.size(1), requires_grad=False).to(x), z)
+        l2 = (recon_x-x).pow(2).mean()
+        bce = F.binary_cross_entropy(recon_x, x, reduction='mean')
+        mmd = MMD(torch.randn(200, z.size(1), requires_grad=False).to(x), z)
+        loss = l2 + mmd
         return loss
 
 

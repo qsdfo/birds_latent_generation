@@ -158,8 +158,7 @@ def get_model_and_dataset(config, loading_epoch):
         deconv_input_shape=decoder_kwargs['deconv_input_shape'],
         z2deconv=decoder_kwargs['z2deconv'],
         deconv_stack=decoder_kwargs['deconv_stack'],
-        n_z=config['n_z'],
-        output_shape=(hparams.num_mel_bins, hparams.chunk_len_win)
+        n_z=config['n_z']
     )
     model = get_model(
         model_type=config['model_type'],

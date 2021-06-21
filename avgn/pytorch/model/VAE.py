@@ -69,6 +69,8 @@ class VAE(nn.Module):
     # Reconstruction + KL divergence losses summed over all elements and batch
     @staticmethod
     def loss_function(recon_x, x, mu, logvar, beta):
-        BCE = F.binary_cross_entropy(recon_x, x, reduction='sum')
-        KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
-        return BCE + beta * KLD
+        l2 = (recon_x-x).pow(2).mean()
+        bce = F.binary_cross_entropy(recon_x, x, reduction='mean')
+        kld = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
+        loss = l2 + beta * kld
+        return loss
