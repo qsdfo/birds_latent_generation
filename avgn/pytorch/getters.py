@@ -16,6 +16,7 @@ from torchvision import datasets, transforms
 from avgn.pytorch.model.VAE import VAE
 from avgn.pytorch.model.VAE_categorical import VAE_categorical
 from avgn.pytorch.model.VAE_MMD import VAE_MMD
+from avgn.pytorch.model.VAE_L2 import VAE_L2
 
 
 def get_model(model_type, model_kwargs, encoder, decoder, model_dir):
@@ -24,10 +25,15 @@ def get_model(model_type, model_kwargs, encoder, decoder, model_dir):
                    decoder=decoder,
                    beta=model_kwargs['beta'],
                    model_dir=model_dir)
+    elif model_type == 'VAE_L2':
+        return VAE_L2(encoder=encoder,
+                      decoder=decoder,
+                      beta=model_kwargs['beta'],
+                      model_dir=model_dir)
     elif model_type == 'VAE_MMD':
         return VAE_MMD(encoder=encoder,
-                   decoder=decoder,
-                   model_dir=model_dir)
+                       decoder=decoder,
+                       model_dir=model_dir)
     elif model_type == 'VAE_categorical':
         return VAE_categorical(encoder=encoder,
                                decoder=decoder,
@@ -138,8 +144,10 @@ def get_model_and_dataset(config, loading_epoch):
             dataset_train = SingDataset(syllable_paths_train)
             dataset_val = SingDataset(syllable_paths_val)
         elif config['model_type'] in ['VAE', 'VAE_MMD']:
-            dataset_train = SpectroDataset(syllable_paths_train, hparams.chunk_len_win, hparams.num_mel_bins)
-            dataset_val = SpectroDataset(syllable_paths_val, hparams.chunk_len_win, hparams.num_mel_bins)
+            dataset_train = SpectroDataset(
+                syllable_paths_train, hparams.chunk_len_win, hparams.num_mel_bins)
+            dataset_val = SpectroDataset(
+                syllable_paths_val, hparams.chunk_len_win, hparams.num_mel_bins)
             # dataset_train = SpectroCategoricalDataset(syllable_df_train)
             # dataset_val = SpectroCategoricalDataset(syllable_df_val)
         else:

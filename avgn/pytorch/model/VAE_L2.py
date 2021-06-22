@@ -7,14 +7,14 @@ from torch.nn import functional as F
 from avgn.utils.cuda_variable import cuda_variable
 
 
-class VAE(nn.Module):
+class VAE_L2(nn.Module):
     """a basic vae class for tensorflow
     Extends:
         tf.keras.Model
     """
 
     def __init__(self, encoder, decoder, model_dir, beta=1.0):
-        super(VAE, self).__init__()
+        super(VAE_L2, self).__init__()
         self.beta = beta
         self.enc = encoder
         self.dec = decoder
@@ -69,8 +69,8 @@ class VAE(nn.Module):
     # Reconstruction + KL divergence losses summed over all elements and batch
     @staticmethod
     def loss_function(recon_x, x, mu, logvar, beta):
-        # l2 = (recon_x-x).pow(2).mean()
-        bce = F.binary_cross_entropy(recon_x, x, reduction='mean')
+        l2 = (recon_x-x).pow(2).mean()
+        # bce = F.binary_cross_entropy(recon_x, x, reduction='mean')
         kld = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
-        loss = bce + kld
+        loss = l2 + kld
         return loss
