@@ -272,13 +272,13 @@ if __name__ == '__main__':
 
     sr_l = [44100]
     num_mel_bins_l = [64]
-    n_fft_l = [512]
+    n_fft_l = [256]
     mel_lower_edge_hertz_l = [500]
     mel_upper_edge_hertz_l = [20000]
     hop_length_l = [128]
-    win_length_l = [512]
+    win_length_l = [256]
     power_l = [1.5]
-    ref_level_db_l = [-24]
+    ref_level_db_l = [-20]
     chunk_len = {
         'type': 'stft_win',
         'value': 256

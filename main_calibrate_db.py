@@ -101,11 +101,11 @@ if __name__ == '__main__':
     # Grid search
     sr = 44100
     num_mel_bins = 64
-    n_fft = 512
+    n_fft = 256
     mel_lower_edge_hertz = 500
     mel_upper_edge_hertz = 20000
     hop_length = 128
-    win_length = 512
+    win_length = 256
     power = 1.5
     ref_level_db = 0
     # dataset_loc = '/home/leo/Code/birds_latent_generation/data/raw/voizo_chunks'

@@ -14,7 +14,7 @@ mel_lower_edge_hertz = 500
 mel_upper_edge_hertz = 20000
 
 #  Model
-n_z = 16
+n_z = 32
 deconv_input_shape = (256, 2, 5)  # (num_channel, x_dim_latent, y_dim_latent)
 h_dim = num_mel_bins
 w_dim = time_dim
@@ -31,7 +31,7 @@ config = {
                              f'mell-{mel_lower_edge_hertz}_' \
                              f'melh-{mel_upper_edge_hertz}',
     # --- Model ---
-    'model_type': 'VAE',
+    'model_type': 'VAE_L2',
     'n_z': n_z,
     'encoder_kwargs': dict(
         conv_stack=[
@@ -93,7 +93,7 @@ config = {
 
     # ======== Training ========
     'lr': 1e-4,
-    'batch_size': 8,
+    'batch_size': 64,
     'num_batches': 512,
     'num_epochs': 500000,
 
