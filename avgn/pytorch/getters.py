@@ -143,7 +143,7 @@ def get_model_and_dataset(config, loading_epoch):
         if config['model_type'] == 'SING':
             dataset_train = SingDataset(syllable_paths_train)
             dataset_val = SingDataset(syllable_paths_val)
-        elif config['model_type'] in ['VAE', 'VAE_MMD']:
+        elif config['model_type'] in ['VAE', 'VAE_MMD', 'VAE_L2']:
             dataset_train = SpectroDataset(
                 syllable_paths_train, hparams.chunk_len_win, hparams.num_mel_bins)
             dataset_val = SpectroDataset(
