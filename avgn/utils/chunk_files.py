@@ -55,6 +55,8 @@ def chunk_files(data_dir, dataset_id):
             sf.write(new_name(wav_path, chunk_counter), y, samplerate=sr)
         del y
     print('finished')
+
+
 if __name__ == '__main__':
     from avgn.utils.paths import DATA_DIR
     data_dir = DATA_DIR
