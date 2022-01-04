@@ -16,7 +16,7 @@ def generate_json_custom(wavfile, DT_ID):
     dt = datetime.now()
     datestring = dt.strftime("%Y-%m-%d")
 
-    DATASET_ID = f'{dataset_id}_{indv}'
+    DATASET_ID = f"{dataset_id}"
     sr = get_samplerate(wavfile.as_posix())
     wav_duration = librosa.get_duration(filename=wavfile.as_posix())
     wav_loc = wavfile.as_posix()
@@ -46,14 +46,14 @@ def generate_json_custom(wavfile, DT_ID):
     json_txt = json.dumps(json_dict, cls=NoIndentEncoder, indent=2)
 
     json_out = (
-        DATA_DIR / "processed" / DATASET_ID /
-        DT_ID / "JSON" / (wavfile.stem + ".JSON")
+        DATA_DIR / "processed" / DATASET_ID / DT_ID / "JSON" / (wavfile.stem + ".JSON")
     )
 
     # save json
     ensure_dir(json_out.as_posix())
     print(json_txt, file=open(json_out.as_posix(), "w"))
     return
+
 
 def generate_json(wavfile, DT_ID, song_db):
     indv = wavfile.parent.parent.stem
@@ -100,7 +100,7 @@ def generate_json(wavfile, DT_ID, song_db):
     tg = wavfile.parent.parent / "TextGrids" / (wavfile.stem + ".TextGrid")
 
     if not tg.exists():
-        print(tg.as_posix(), 'File does not exist')
+        print(tg.as_posix(), "File does not exist")
         return
     textgrid = tgio.openTextgrid(fnFullPath=tg)
 
@@ -123,8 +123,7 @@ def generate_json(wavfile, DT_ID, song_db):
     json_txt = json.dumps(json_dict, cls=NoIndentEncoder, indent=2)
 
     json_out = (
-        DATA_DIR / "processed" / DATASET_ID /
-        DT_ID / "JSON" / (wavfile.stem + ".JSON")
+        DATA_DIR / "processed" / DATASET_ID / DT_ID / "JSON" / (wavfile.stem + ".JSON")
     )
 
     # save json

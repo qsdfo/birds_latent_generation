@@ -52,8 +52,8 @@ def RMS(data, rate, rms_stride, rms_window, rms_padding, noise_thresh):
     )
     # convolve on our filter
     sound_threshed = np.array(np.convolve(rms_threshed, block_filter, "valid") > 0)[
-                     : len(rms_data)
-                     ]
+        : len(rms_data)
+    ]
 
     return rms_data, sound_threshed
 
@@ -63,8 +63,7 @@ import os
 
 
 def prepare_mel_matrix(hparams, rate, return_numpy=True, GPU_backend=False):
-    """ Create mel filter
-    """
+    """Create mel filter"""
     # import tensorflow if needed
     if "tf" not in sys.modules:
         if not GPU_backend:
@@ -94,7 +93,8 @@ def prepare_mel_matrix(hparams, rate, return_numpy=True, GPU_backend=False):
     enorm = tf.dtypes.cast(
         tf.expand_dims(
             tf.constant(
-                2.0 / (mel_f[2: hparams.num_mel_bins + 2] - mel_f[: hparams.num_mel_bins])
+                2.0
+                / (mel_f[2 : hparams.num_mel_bins + 2] - mel_f[: hparams.num_mel_bins])
             ),
             0,
         ),

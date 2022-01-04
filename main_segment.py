@@ -1,7 +1,11 @@
+import os
+from avgn.utils.calibrate import calibrate_db
 from avgn.utils.seconds_to_samples import ms_to_sample
-from avgn.signalprocessing.dynamic_thresholding_scipy import dynamic_threshold_segmentation
+from avgn.signalprocessing.dynamic_thresholding_scipy import (
+    dynamic_threshold_segmentation,
+)
 import json
-import re
+import pickle as pkl
 from datetime import datetime
 
 import librosa
@@ -10,13 +14,15 @@ import numpy as np
 
 from avgn.dataset import DataSet
 from avgn.signalprocessing.filtering import butter_bandpass_filter
-from avgn.utils.hparams\
-    import HParams
+from avgn.utils.hparams import HParams
 from avgn.utils.json_custom import NoIndent, NoIndentEncoder
 from avgn.utils.paths import DATA_DIR, ensure_dir
+import click
 
 
-def main():
+@click.command()
+@click.option("-n", "--dataset_id", type=str, help="Name of the database to chunk")
+def main(dataset_id):
     """
     min_level_db, min_level_db_floor et delta_db:
     dynamic segmentation will scan from min_level_db to min_level_db_floor with increment delta_db
@@ -25,48 +31,48 @@ def main():
      - smaller than max_vocal_for_spec
     Need careful tweaking of these five parameters to find the optimal automatic segmentation...
     """
-    # DATASET_ID = 'voizo_chunks_Nigthingale'
-    # DATASET_ID = 'voizo_chunks_Corvus'
-    DATASET_ID = 'du-ra-mo-ni-ro'
-    # DATASET_ID = 'voizo_chunks_test'
     # create a unique datetime identifier
+
     DT_ID = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
     # segmentation parameters
     sr = 44100
     n_fft = 4096
 
+    # windowing for segmentation
     win_length_ms = 10
     hop_length_ms = 2
+    win_length_samples = ms_to_sample(win_length_ms, sr=sr)
+    hop_length_samples = ms_to_sample(hop_length_ms, sr=sr)
 
+    # MelSpec
+    num_mel_bins = 64
     mel_lower_edge_hertz = 500
     mel_upper_edge_hertz = 20000
     butter_lowcut = 500
     butter_highcut = 20000
     pre = 0.97
-
-    ref_level_db = -10
-    min_level_db_floor = -30
-    db_delta = 5
+    power = 1.5
 
     silence_threshold = 0.01
     min_silence_for_spec = 0.05
-    max_vocal_for_spec = 1.0,
+    max_vocal_for_spec = (1.0,)
     min_syllable_length_s = 0.05
-    spectral_range = [mel_lower_edge_hertz,
-                      mel_upper_edge_hertz]
+    spectral_range = [mel_lower_edge_hertz, mel_upper_edge_hertz]
 
     # create an hparam object
+    min_level_db_floor = -30
+    db_delta = 5
     hparams = HParams(
         sr=sr,
         n_fft=n_fft,
-        win_length_samples=ms_to_sample(win_length_ms, sr=sr),
-        hop_length_samples=ms_to_sample(hop_length_ms, sr=sr),
+        win_length_samples=win_length_samples,
+        hop_length_samples=hop_length_samples,
         chunk_len_samples=None,
-        ref_level_db=ref_level_db,
+        ref_level_db=0,
         preemphasis=0.97,
-        num_mel_bins=64,
-        power=1.5,
+        num_mel_bins=num_mel_bins,
+        power=power,
         mel_lower_edge_hertz=mel_lower_edge_hertz,
         mel_upper_edge_hertz=mel_upper_edge_hertz,
         butter_lowcut=butter_lowcut,
@@ -76,10 +82,10 @@ def main():
         mask_spec=False,
         mask_spec_kwargs={"spec_thresh": 0.9, "offset": 1e-10},
         n_jobs=-1,
-        verbosity=1
+        verbosity=1,
     )
     # create a dataset object
-    dataset = DataSet(DATASET_ID, hparams=hparams)
+    dataset = DataSet(dataset_id, hparams=hparams)
 
     processed_files = []
     segmented_files = []
@@ -103,7 +109,7 @@ def main():
             win_length=ms_to_sample(win_length_ms, sr),
             min_level_db_floor=min_level_db_floor,
             db_delta=db_delta,
-            ref_level_db=ref_level_db,
+            ref_level_db=0,
             pre=pre,
             min_silence_for_spec=min_silence_for_spec,
             max_vocal_for_spec=max_vocal_for_spec,
@@ -113,14 +119,19 @@ def main():
             verbose=True,
         )
         if results is None:
-            print('skipping')
+            print("skipping")
             return
 
         segmented_files.append(key)
 
         # save the results
-        json_out = DATA_DIR / "processed" / (DATASET_ID + "_segmented") / DT_ID / "JSON" / (
-            key + ".JSON"
+        json_out = (
+            DATA_DIR
+            / "processed"
+            / (dataset_id + "_segmented")
+            / DT_ID
+            / "JSON"
+            / (key + ".JSON")
         )
 
         json_dict = df.data.copy()
@@ -148,18 +159,19 @@ def main():
 
         return results
 
-    indvs = np.array(['_'.join(list(i)) for i in dataset.json_indv])
+    indvs = np.array(["_".join(list(i)) for i in dataset.json_indv])
     for indv in np.unique(indvs):
         indv_keys = np.array(list(dataset.data_files.keys()))[indvs == indv]
         for key in indv_keys:
-            print('##############')
-            print(f'# {len(processed_files)}')
-            print(f'# {indv}: {key}')
+            print("##############")
+            print(f"# {len(processed_files)}")
+            print(f"# {indv}: {key}")
             segment_spec_custom(key, dataset.data_files[key], save=True)
 
-    print(f'Processed files {len(processed_files)}')
-    print(f'Segmented files {len(segmented_files)}')
+    print(f"Processed files {len(processed_files)}")
+    print(f"Segmented files {len(segmented_files)}")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
-    print('done')
+    print("done")

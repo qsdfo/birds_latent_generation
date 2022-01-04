@@ -1,6 +1,7 @@
 # create a dataset object given a folder full of JSON data
 
 import numpy as np
+from avgn.signalprocessing.spectrogramming_scipy import build_mel_basis
 
 from avgn.utils.paths import DATA_DIR, most_recent_subdirectory
 from avgn.signalprocessing.filtering import prepare_mel_matrix
@@ -11,8 +12,7 @@ from joblib import Parallel, delayed
 
 
 class DataSet(object):
-    """
-    """
+    """ """
 
     def __init__(
         self, DATASET_ID, hparams=None, default_rate=None, build_mel_matrix=True
@@ -45,13 +45,14 @@ class DataSet(object):
             self.build_mel_matrix()
 
     def _get_wav_json_files(self):
-        """ find wav and json files in data folder
-        """
+        """find wav and json files in data folder"""
         if type(self.dataset_loc) == list:
             self.wav_files = np.concatenate(
-                [list((i / "WAV").glob("*.WAV")) for i in self.dataset_loc])
+                [list((i / "WAV").glob("*.WAV")) for i in self.dataset_loc]
+            )
             self.json_files = np.concatenate(
-                [list((i / "JSON").glob("*.JSON")) for i in self.dataset_loc])
+                [list((i / "JSON").glob("*.JSON")) for i in self.dataset_loc]
+            )
         else:
             self.wav_files = list((self.dataset_loc / "WAV").glob("*.WAV"))
             self.json_files = list((self.dataset_loc / "JSON").glob("*.JSON"))
@@ -59,12 +60,13 @@ class DataSet(object):
     def build_mel_matrix(self, rate=None):
         if rate is None:
             rate = self.sample_json["samplerate_hz"]
-        self.mel_matrix = prepare_mel_matrix(self.hparams, rate)
+        # self.mel_matrix = prepare_mel_matrix(self.hparams, rate)
+        self.mel_matrix = build_mel_basis(self.hparams, fs=self.hparams.sr, rate=rate)
 
     def build_inverse_mel_matrix(self, rate=None):
         if rate is None:
             rate = self.sample_json["samplerate_hz"]
-        self.mel_matrix = prepare_mel_matrix(self.hparams, rate)
+        self.mel_matrix = build_mel_basis(self.hparams, fs=self.hparams.sr, rate=rate)
 
     def _get_unique_individuals(self):
         self.json_indv = np.array(
@@ -86,13 +88,11 @@ class DataSet(object):
             df = parallel(
                 delayed(DataFile)(i) for i in tqdm(self.json_files, desc="loading json")
             )
-            self.data_files = {i.stem: df for i,
-                               df in zip(self.json_files, df)}
+            self.data_files = {i.stem: df for i, df in zip(self.json_files, df)}
 
 
 class DataFile(object):
-    """ An object corresponding to a json file
-    """
+    """An object corresponding to a json file"""
 
     def __init__(self, json_loc):
         self.data = read_json(json_loc)

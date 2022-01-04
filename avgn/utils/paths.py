@@ -11,8 +11,7 @@ MODEL_DIR = PROJECT_DIR / "models"
 
 
 def ensure_dir(file_path):
-    """ create a safely nested folder
-    """
+    """create a safely nested folder"""
     if type(file_path) == str:
         if "." in os.path.basename(os.path.normpath(file_path)):
             directory = os.path.dirname(file_path)
@@ -33,7 +32,7 @@ def ensure_dir(file_path):
 
 
 def most_recent_subdirectory(dataset_loc):
-    """ return the subdirectory that has been generated most
+    """return the subdirectory that has been generated most
     recently with the "%Y-%m-%d_%H-%M-%S" time scheme used in AVGN
     """
     subdir_list = list((dataset_loc).iterdir())

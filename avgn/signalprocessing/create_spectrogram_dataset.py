@@ -1,7 +1,6 @@
 import collections
 
 import librosa
-import soundfile as sf
 import noisereduce as nr
 import numpy as np
 import pandas as pd
@@ -22,16 +21,16 @@ def norm(x):
 
 
 def log_resize_spec(spec, scaling_factor=10):
-    resize_shape = [int(np.log(max(np.shape(spec)[1], 2))
-                        * scaling_factor), np.shape(spec)[0]]
-    resize_spec = np.array(Image.fromarray(
-        spec).resize(resize_shape, Image.ANTIALIAS))
+    resize_shape = [
+        int(np.log(max(np.shape(spec)[1], 2)) * scaling_factor),
+        np.shape(spec)[0],
+    ]
+    resize_spec = np.array(Image.fromarray(spec).resize(resize_shape, Image.ANTIALIAS))
     return resize_spec
 
 
 def pad_spectrogram(spectrogram, pad_length):
-    """ Pads a spectrogram to being a certain length
-    """
+    """Pads a spectrogram to being a certain length"""
     excess_needed = pad_length - np.shape(spectrogram)[1]
     pad_left = np.floor(float(excess_needed) / 2).astype("int")
     pad_right = np.ceil(float(excess_needed) / 2).astype("int")
@@ -49,25 +48,23 @@ def list_match(_list, list_of_lists):
 
 
 def mask_spec(spec, spec_thresh=0.9, offset=1e-10):
-    """ mask threshold a spectrogram to be above some % of the maximum power
-    """
+    """mask threshold a spectrogram to be above some % of the maximum power"""
     mask = spec >= (spec.max(axis=0, keepdims=1) * spec_thresh + offset)
     return spec * mask
 
 
 def create_syllable_df(
-        dataset,
-        indv,
-        unit="syllables",
-        log_scaling_factor=10,
-        verbosity=0,
-        log_scale_time=True,
-        pad_syllables=True,
-        n_jobs=-1,
-        include_labels=False,
+    dataset,
+    indv,
+    unit="syllables",
+    log_scaling_factor=10,
+    verbosity=0,
+    log_scale_time=True,
+    pad_syllables=True,
+    n_jobs=-1,
+    include_labels=False,
 ):
-    """ from a DataSet object, get all of the syllables from an individual as a spectrogram
-    """
+    """from a DataSet object, get all of the syllables from an individual as a spectrogram"""
     with tqdm(total=4) as pbar:
         # get waveform of syllables
         pbar.set_description("getting syllables")
@@ -81,8 +78,7 @@ def create_syllable_df(
                     include_labels=include_labels,
                 )
                 for json_file in tqdm(
-                    np.array(dataset.json_files)[
-                        list_match(indv, dataset.json_indv)],
+                    np.array(dataset.json_files)[list_match(indv, dataset.json_indv)],
                     desc="getting syllable wavs",
                     leave=False,
                 )
@@ -135,8 +131,7 @@ def create_syllable_df(
             # Mask spectrograms
             if dataset.hparams.mask_spec:
                 syllables_spec = parallel(
-                    delayed(mask_spec)(
-                        syllable, **dataset.hparams.mask_spec_kwargs)
+                    delayed(mask_spec)(syllable, **dataset.hparams.mask_spec_kwargs)
                     for syllable in tqdm(
                         syllables_spec,
                         total=len(syllables_rate),
@@ -150,8 +145,7 @@ def create_syllable_df(
             # log resize spectrograms
             if log_scale_time:
                 syllables_spec = parallel(
-                    delayed(log_resize_spec)(
-                        spec, scaling_factor=log_scaling_factor)
+                    delayed(log_resize_spec)(spec, scaling_factor=log_scaling_factor)
                     for spec in tqdm(
                         syllables_spec, desc="scaling spectrograms", leave=False
                     )
@@ -187,8 +181,7 @@ def create_syllable_df(
 
 
 def prepare_wav(wav_loc, hparams, debug):
-    """ load wav and convert to correct format
-    """
+    """load wav and convert to correct format"""
     if debug:
         debug_data = {}
     else:
@@ -219,21 +212,19 @@ def prepare_wav(wav_loc, hparams, debug):
         for data in data_chunks:
 
             if debug:
-                debug_data['x'] = data
+                debug_data["x"] = data
 
             data = butter_bandpass_filter(
                 data, hparams.butter_lowcut, hparams.butter_highcut, hparams.sr, order=5
             )
             if debug:
-                debug_data['x_filtered'] = data
+                debug_data["x_filtered"] = data
 
             # reduce noise
             if hparams.reduce_noise:
-                data = nr.reduce_noise(
-                    audio_clip=data, noise_clip=data, **hparams.noise_reduce_kwargs
-                )
+                data = nr.reduce_noise(y=data, sr=hparams.sr)
             if debug:
-                debug_data['x_rn'] = data
+                debug_data["x_rn"] = data
             data_cleaned.append(data)
     else:
         data_cleaned = data_chunks
@@ -244,15 +235,14 @@ def prepare_wav(wav_loc, hparams, debug):
 
 
 def create_label_df(
-        json_dict,
-        hparams=None,
-        labels_to_retain=[],
-        unit="syllables",
-        dict_features_to_retain=[],
-        key=None,
+    json_dict,
+    hparams=None,
+    labels_to_retain=[],
+    unit="syllables",
+    dict_features_to_retain=[],
+    key=None,
 ):
-    """ create a dataframe from json dictionary of time events and labels
-    """
+    """create a dataframe from json dictionary of time events and labels"""
 
     syllable_dfs = []
     # loop through individuals

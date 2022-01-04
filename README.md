@@ -1,26 +1,54 @@
 # Birds latent generation
 
-## Installation
+# Installations
 
     pip -r requirements.txt
 
-## Create a database
+# Create a database
 
-### Birds_DB
+## Birds_DB
 To use with Bird_db, you can download the files by running
 
     python main_download.py
 
 If BIRD_DB.xls is missing it's here (https://github.com/timsainb/AVGN/blob/master/notebooks/birdsong/cassins_vireo_example/BIRD_DB.xls)
 
-### Custom database
-The database should have the following structure:
-birds_latent_generation > data > raw > "name of database" > wavs > "audio files with .wav extension"
+## Custom database
+If you plan to use a custom database, perhaps it is a good idea to first get used to the structure of the database by downloading and running the code on birds_db (see previous section).
 
-If the dataset has been manually annotated, you can provide segmentation information in textgrids files
-birds_latent_generation > data > raw > "name of database" > TextGrids > "same name as corresponding wav but with .TextGrid extension"
+The database should have the following structure, (with the exact names, unless indicated):
+```
+birds_latent_generation
+│   README.md
+│   avgn
+│   ...
+└───data
+    │   BIRD_DB.xls (only if you work with BIRD_DB)
+    └───raw
+        └───database_name (or custom name)
+            └───label_1 (or custom name)
+            │   └───wavs
+            │   │   │   "name1 (or custom name).wav"
+            │   │   │   "name2.wav"
+            │   │   │   ...
+            │   │
+            │   └───TextGrids (optional)
+            │       │   "name1 (or custom name, but same as in the corresponding wavs folder).TextGrid"
+            │       │   "name2.TextGrid"
+            │       │   ...
+            │
+            └───label_2 (or custom name)
+            │   ...
 
-An exemple of TextGris file for 2 segments is:
+```
+
+TextGrid information is optional and correspond to manual annotations of segments.
+If not provided, automatic segmentation will be performed later.
+The name for wav and corresponding textgrid files have to be exactly the same.
+
+Each subfolder label_1, label_2 represents class of data.
+
+Here is an example of a TextGrid file (only the first 2 segments are shown):
 
         File type = "ooTextFile"
         Object class = "TextGrid"
@@ -46,29 +74,39 @@ An exemple of TextGris file for 2 segments is:
                     text = "ah"
 
 
-## Chunk files
-Recordings can be too long for there spectrograms to fit in memory. Depending on your computer's RAM, you may need to chunk files first.
-In that case run
+# Processing the database
+## Chunk files (optional)
+Depending on your computer's RAM and recordings length, spectrograms may not fit in memory.
+In that case run, you can chunk files in a database by running
 
-    python utils/chunk_files
+    python main_chunk.py -n database_name -d 120
 
-Duration is hard-coded in the function... but it's quite easy to find it (chunk_duration_second)
+Argument -n is the name of the database.
+Argument -d is is the duration for chunks in seconds (you can omit this argument which will default to 120 seconds)
 
-## Calibrate decibel
-You may want to run main_calibrate_db to find the ideal values for the ref and min dB parameters
-
-    python main_calibrate_db.py
+It will create another database folder with "_chunks" appended at the end of the name.
+The code does not deal with TextGrids for now, so you will need to perform automatic segmentation as described below.
 
 ## Preprocess
-Create a json file listing the files
+Create a json file listing the wav files in the database
 
-    python main_preprocess.py
+    python main_preprocess.py -n database_name
 
-## Segment
-This step is useless if your database has been manually annotated (this is the case for BIRD_DB).
-Otherwise, it performs automatic segmentation and populate the
+This will create another processed folder where it stores JSON files containing information about both the database and the processing.
 
-    python main_segment.py
+    birds_latent_generation
+    └───data
+        └───raw
+        └───processed
+            └───name
+                └───id (based on date and time)
+                    └───...
+
+## Segment (optional)
+This step is useless if your database has been manually annotated (this is the case for bird_db).
+Otherwise, it performs automatic segmentation.
+
+    python main_segment.py -n database_name
 
 - main_spectrogram
 - train and generate with main_torch

@@ -10,28 +10,27 @@ from pathlib2 import Path
 from avgn.custom_parsing.bird_db import generate_json, generate_json_custom
 from avgn.downloading.birdDB import openBirdDB_df
 from avgn.utils.paths import DATA_DIR
+import click
 
 
-def main():
-    # song_db = openBirdDB_df()
-    # DATASET_ID = 'bird-db'
-    # DT_ID = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-
-    song_db = None
-    # DATASET_ID = 'voizo_chunks'
-    DATASET_ID = 'du-ra-mo-ni-ro_chunks'
+@click.command()
+@click.option("-n", "--dataset_id", type=str, help="Name of the database to chunk")
+def main(dataset_id):
+    if dataset_id == "bird-db":
+        song_db = openBirdDB_df()
+    else:
+        song_db = None
     DT_ID = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-
-    dataset_path = Path(f'{DATA_DIR}/raw/{DATASET_ID}')
-    wavs = set((dataset_path).expanduser().glob('**/*.wav'))
-    print(wavs)
-
+    dataset_path = Path(f"{DATA_DIR}/raw/{dataset_id}")
+    wavs = set((dataset_path).expanduser().glob("**/*.wav"))
+    print(f"Num files {len(wavs)}")
     for wf in wavs:
         if song_db is not None:
             generate_json(wf, DT_ID, song_db)
         else:
             generate_json_custom(wf, DT_ID)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
-    print('done')
+    print("done")
